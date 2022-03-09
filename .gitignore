@@ -1,0 +1,12 @@
+.vscode/*
+__pycache__/*
+lightning_logs/*
+outdir/*
+model_checkpoints/*
+wandb/*
+tb_logs/*
+data/splits/*
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
