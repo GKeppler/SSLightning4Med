@@ -13,3 +13,11 @@ TODO
 
 Modify and run split scripts in /scripts
 TODO
+
+## Code from 
+
+@misc{ssl4mis2020,
+		title={{SSL4MIS}},
+		author={Luo, Xiangde},
+		howpublished={\url{https://github.com/HiLab-git/SSL4MIS}},
+		year={2020}}
