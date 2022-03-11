@@ -1,21 +1,27 @@
 import os
 from argparse import ArgumentParser
+from typing import Any, Tuple
 
 import cv2
 import numpy as np
 import pytorch_lightning as pl
 import wandb
 from medpy import metric
+from numpy import float64, ndarray
+from torch import Tensor
+from wandb.sdk.data_types import Image
+
+from model.base_module import BaseModule
 
 EPS = 1e-10
 
 
 class meanIOU:
-    def __init__(self, num_classes):
+    def __init__(self, num_classes: int) -> None:
         self.num_classes = num_classes
         self.hist = np.zeros((num_classes, num_classes))
 
-    def _fast_hist(self, label_pred, label_true):
+    def _fast_hist(self, label_pred: ndarray, label_true: ndarray) -> ndarray:
         mask = (label_true >= 0) & (label_true < self.num_classes)
         hist = np.bincount(
             self.num_classes * label_true[mask].astype(int) + label_pred[mask],
@@ -23,22 +29,22 @@ class meanIOU:
         ).reshape(self.num_classes, self.num_classes)
         return hist
 
-    def add_batch(self, predictions, gts):
+    def add_batch(self, predictions: ndarray, gts: ndarray) -> None:
         for lp, lt in zip(predictions, gts):
             self.hist += self._fast_hist(lp.flatten(), lt.flatten())
 
-    def evaluate(self):
+    def evaluate(self) -> Tuple[ndarray, float64]:
         iu = np.diag(self.hist) / (self.hist.sum(axis=1) + self.hist.sum(axis=0) - np.diag(self.hist) + EPS)
         return iu, np.nanmean(iu)
 
 
 class mulitmetrics:
     # from https://github.com/kevinzakka/pytorch-goodies/blob/c039691f349be9f21527bb38b907a940bfc5e8f3/metrics.py
-    def __init__(self, num_classes):
+    def __init__(self, num_classes: int) -> None:
         self.num_classes = num_classes
         self.hist = np.zeros((num_classes, num_classes))
 
-    def _fast_hist(self, label_pred, label_true):
+    def _fast_hist(self, label_pred: ndarray, label_true: ndarray) -> ndarray:
         mask = (label_true >= 0) & (label_true < self.num_classes)
         hist = np.bincount(
             self.num_classes * label_true[mask].astype(int) + label_pred[mask],
@@ -46,11 +52,11 @@ class mulitmetrics:
         ).reshape(self.num_classes, self.num_classes)
         return hist
 
-    def add_batch(self, predictions, gts):
+    def add_batch(self, predictions: ndarray, gts: ndarray) -> None:
         for lp, lt in zip(predictions, gts):
             self.hist += self._fast_hist(lp.flatten(), lt.flatten())
 
-    def evaluate(self):
+    def evaluate(self) -> Tuple[float64, float64, float64]:
         A_inter_B = np.diag(self.hist)
         A = self.hist.sum(axis=1)
         B = self.hist.sum(axis=0)
@@ -70,7 +76,7 @@ class mulitmetrics:
         return overall_acc, meanIOU, avg_dice
 
 
-def calculate_metric_percase(pred, gt):
+def calculate_metric_percase(pred: ndarray, gt: ndarray) -> Tuple[float64, float64, float64, float64]:
     dc = metric.binary.dc(pred, gt)
     jc = metric.binary.jc(pred, gt)
     hd = metric.binary.hd95(pred, gt)
@@ -79,7 +85,7 @@ def calculate_metric_percase(pred, gt):
     return dc, jc, hd, asd
 
 
-def wandb_image_mask(img, mask, pred, nclass=21):
+def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) -> Image:
     class_labeles = dict((el, "something") for el in list(range(nclass)))
     class_labeles.update({0: "nothing"})
     return wandb.Image(
@@ -109,7 +115,7 @@ def wandb_image_mask(img, mask, pred, nclass=21):
     )
 
 
-def sigmoid_rampup(current, rampup_length=200):
+def sigmoid_rampup(current: int, rampup_length: int = 200) -> float:
     """Exponential rampup from https://arxiv.org/abs/1610.02242"""
     if rampup_length == 0:
         return 1.0
@@ -119,7 +125,7 @@ def sigmoid_rampup(current, rampup_length=200):
         return float(np.exp(-5.0 * phase * phase))
 
 
-def base_parse_args(LightningModule: pl.LightningModule):
+def base_parse_args(LightningModule: BaseModule) -> Any:  # type: ignore
     parser = ArgumentParser()
     # basic settings
     parser.add_argument(

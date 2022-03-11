@@ -19,7 +19,7 @@ class BaseDataset:
     def __init__(
         self,
         root_dir: str,
-        id_list: Optional[List[str]] = None,
+        id_list: List[str],
         pseudo_mask_path: Optional[str] = None,
         transform: Optional[Compose] = None,
     ) -> None:

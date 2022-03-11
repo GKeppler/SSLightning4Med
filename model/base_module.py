@@ -36,9 +36,17 @@ class BaseModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):  # type: ignore
         raise NotImplementedError
 
+    def validation_step(self, batch, batch_idx):  # type: ignore
+        img, mask, id = batch
+        pred = self(img)
+        self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
+        val_acc = self.metric.evaluate()[-1]
+        self.log("mIOU", val_acc)
+        return {"mIOU": val_acc}
+
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
-        pred = self.model(img)[0]
+        pred = self.model(img)
         pred = torch.argmax(pred, dim=1).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
         return {"Test Pictures": wandb_image_mask(img, mask, pred, self.args.n_class)}

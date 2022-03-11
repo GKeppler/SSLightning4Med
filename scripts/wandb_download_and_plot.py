@@ -2,6 +2,8 @@
 This script downlaods metrics from Wandb, plots them, produces a latex table and saves results in a CSV
 """
 
+from typing import Dict
+
 #%%
 import matplotlib
 import matplotlib.pyplot as plt
@@ -87,7 +89,7 @@ columns = list(set([el[0] for el in metrics_df.columns.tolist()]))
 # function to generate text from merics to use in latex table
 
 
-def make_text(s):
+def make_text(s: Dict) -> str:
     mean = s["mean"]
     std = s["std"]
     return f"{mean*100:.2f}({std*100:.2f})"

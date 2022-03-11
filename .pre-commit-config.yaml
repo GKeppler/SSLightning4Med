@@ -1,8 +1,4 @@
 repos:
-  - repo: https://github.com/pycqa/isort
-    rev: 5.5.2
-    hooks:
-      - id: isort
   - repo: https://github.com/psf/black
     rev: 21.12b0
     hooks:
@@ -23,14 +19,6 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: requirements-txt-fixer
-  # - repo: https://github.com/pre-commit/mirrors-pylint
-  #   rev: 56b3cb4
-  #   hooks:
-  #     - id: pylint
-  #       args:
-  #         - --max-line-length=120
-  #         - --ignore-imports=yes
-  #         - -d duplicate-code
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.9.0
     hooks:
@@ -39,16 +27,16 @@ repos:
       - id: python-check-blanket-noqa
       - id: python-use-type-annotations
       - id: text-unicode-replacement-char
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: 9feadeb
-  #   hooks:
-  #     - id: mypy
-  #       exclude: ^tests/
-  #       args:
-  #         [
-  #             --disallow-untyped-defs,
-  #             --check-untyped-defs,
-  #             --warn-redundant-casts,
-  #             --no-implicit-optional,
-  #             --strict-optional
-  #         ]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 9feadeb
+    hooks:
+      - id: mypy
+        exclude: ^tests/
+        args:
+          [
+              --disallow-untyped-defs,
+              --check-untyped-defs,
+              --warn-redundant-casts,
+              --no-implicit-optional,
+              --strict-optional
+          ]

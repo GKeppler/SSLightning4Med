@@ -10,7 +10,7 @@ TODO
 ## Data Preparation
 
 ### Download datasets
-[Ultrasound detection of breast nodules](https://scholar.cu.edu.eg/?q=afahmy/pages/dataset) | [SIIM 2017 ISIC Melanoma Segmentation](https://challenge.isic-archive.com/data/) | 
+[Ultrasound detection of breast nodules](https://scholar.cu.edu.eg/?q=afahmy/pages/dataset) | [SIIM 2017 ISIC Melanoma Segmentation](https://challenge.isic-archive.com/data/) |
 [Automated Cardiac Diagnosis Challenge](https://www.creatis.insa-lyon.fr/Challenge/acdc/databasesTesting.html) | [SIIM-ACR Pneumothorax Segmentation](https://www.kaggle.com/c/siim-acr-pneumothorax-segmentation)
 
 Download dataset and split fro exmaple into following folder structure.

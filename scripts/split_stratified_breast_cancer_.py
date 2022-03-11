@@ -2,6 +2,7 @@ import random
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
+from typing import List
 
 import yaml
 from sklearn.model_selection import StratifiedKFold
@@ -13,9 +14,9 @@ splits = ["1", "1/4", "1/8", "1/30"]
 # /lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017")
 images_folder = "images"
 labels_folder = "labels"
-training_filelist = []
-val_filelist = []
-test_filelist = []
+training_filelist: List[str] = []
+val_filelist: List[str] = []
+test_filelist: List[str] = []
 
 # pnuemothorax dataset
 dataset = r"breastCancer"

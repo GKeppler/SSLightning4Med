@@ -2,6 +2,7 @@ import random
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
+from typing import List
 
 import yaml
 from sklearn.model_selection import KFold
@@ -13,9 +14,9 @@ splits = ["1", "1/4", "1/8", "1/30"]
 # /lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017")
 images_folder = "images"
 labels_folder = "labels"
-training_filelist = []
-val_filelist = []
-test_filelist = []
+training_filelist: List[str] = []
+val_filelist: List[str] = []
+test_filelist: List[str] = []
 
 # pnuemothorax dataset
 dataset = r"pneumothorax"
@@ -48,7 +49,6 @@ print(training_filelist[:2], list_len)
 # %%
 # shuffle labeled/unlabeled
 for shuffle in range(num_shuffels):
-    break
     yaml_dict = {}
     for split in splits:
         random.shuffle(training_filelist)
@@ -79,7 +79,6 @@ for shuffle in range(num_shuffels):
             yaml.dump(yaml_dict, outfile, default_flow_style=False)
 
 # test yaml file
-yaml_dict = {}
 yaml_path = rf"dataset/splits/{dataset}/"
 Path(yaml_path).mkdir(parents=True, exist_ok=True)
 

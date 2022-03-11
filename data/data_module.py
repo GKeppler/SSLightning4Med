@@ -62,6 +62,11 @@ class SemiDataModule(pl.LightningDataModule):
             id_list=val_split_0["unlabeled"],
             transform=self.train_transforms_unlabeled,
         )
+        self.val_dataset = BaseDataset(
+            root_dir=self.root_dir,
+            transform=self.val_transforms,
+            id_list=val_split_0["val"],
+        )
         # testset
         with open(self.test_yaml_path, "r") as file:
             test_list = yaml.load(file, Loader=yaml.FullLoader)
@@ -90,6 +95,12 @@ class SemiDataModule(pl.LightningDataModule):
             return {"unlabeled": loader_unlabeled, "labeled": loader_labeled}
         else:
             raise ValueError("Wrong dataloader mode for training")
+
+    def val_dataloader(self) -> DataLoader:
+        return DataLoader(
+            self.val_dataset,
+            batch_size=1,
+        )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(

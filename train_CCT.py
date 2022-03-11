@@ -1,21 +1,24 @@
 import os
 from argparse import ArgumentParser
-
-import albumentations as A
-import pytorch_lightning as pl
-import torch
+from typing import Any, Dict, List, Tuple
 import wandb
-from albumentations.pytorch import ToTensorV2
+
+
+import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
+import torch
+from torch import Tensor
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 from data.data_module import SemiDataModule
 from model.base_module import BaseModule
 from model.unet import UNet_CCT
-from utils import base_parse_args, mulitmetrics, sigmoid_rampup
+from utils import base_parse_args, mulitmetrics, sigmoid_rampup, wandb_image_mask
 
 
 class CCTModule(BaseModule):
@@ -31,14 +34,14 @@ class CCTModule(BaseModule):
         parser.add_argument("--method", default="CCT")
         return parent_parser
 
-    def __init__(self, args):
+    def __init__(self, args: Any):
         super(CCTModule, self).__init__(args)
         self.ce_loss = CrossEntropyLoss()
         self.model = UNet_CCT(in_chns=3, class_num=args.n_class)
         self.consistency = 0.1
         self.test_metrics = mulitmetrics(num_classes=args.n_class)
 
-    def training_step(self, batch):
+    def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         batch_unusupervised = batch["unlabeled"]
         batch_supervised = batch["labeled"]
 
@@ -73,7 +76,14 @@ class CCTModule(BaseModule):
         loss = supervised_loss + consistency_loss * consistency_weight
         return loss
 
-    def configure_optimizers(self):
+    def test_step(self, batch, batch_idx):  # type: ignore
+        img, mask, id = batch
+        pred = self.model(img)[0]
+        pred = torch.argmax(pred, dim=1).cpu()
+        self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
+        return {"Test Pictures": wandb_image_mask(img, mask, pred, self.args.n_class)}
+
+    def configure_optimizers(self) -> List:
         optimizer = SGD(self.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
         return [optimizer]
 

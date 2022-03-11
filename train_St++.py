@@ -1,19 +1,22 @@
 import os
 from argparse import ArgumentParser
 from copy import deepcopy
-
-import albumentations as A
-import cv2
-import numpy as np
-import pytorch_lightning as pl
-import torch
-import torch.nn.functional as F
 import wandb
 import yaml
+import cv2
+import numpy as np
+from typing import Any, Dict, List, Tuple, Union, Optional
+from numpy import float64
+
+import torch
+from torch import Tensor
+import torch.nn.functional as F
+import pytorch_lightning as pl
 from albumentations.pytorch import ToTensorV2
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
+import albumentations as A
 
 from data.data_module import SemiDataModule
 from model.base_module import BaseModule
@@ -35,46 +38,46 @@ class STPlusPlusModule(BaseModule):
         parser.add_argument("--use-tta", default=True, help="whether to use Test Time Augmentation")
         return parent_parser
 
-    def __init__(self, args):
+    def __init__(self, args: Any) -> None:
         super(STPlusPlusModule, self).__init__(args)
-        self.checkpoints = []
-        self.id_to_reliability = []
+        self.checkpoints: List[torch.nn.Module] = []
+        self.id_to_reliability: List[Tuple] = []
+        self.previous_best: float = 0.0
         self.args = args
         self.mode = "label"
 
-    def base_forward(self, x):
+    def base_forward(self, x: Tensor) -> Tensor:
         h, w = x.shape[-2:]
         x = self.model(x)
         x = F.interpolate(x, (h, w), mode="bilinear", align_corners=True)
         return x
 
-    def forward(self, x, tta=False):  # type: ignore
+    def forward(self, x: Tensor, tta: bool = False) -> Optional[Tensor]:
         if not tta:
             return self.base_forward(x)
 
-        else:
-            h, w = x.shape[-2:]
-            # scales = [0.5, 0.75, 1.0]
-            # to avoid cuda out of memory
-            scales = [0.5, 0.75, 1.0, 1.5, 2.0]
+        h, w = x.shape[-2:]
+        # scales = [0.5, 0.75, 1.0]
+        # to avoid cuda out of memory
+        scales = [0.5, 0.75, 1.0, 1.5, 2.0]
 
-            final_result = None
+        final_result = None
 
-            for scale in scales:
-                cur_h, cur_w = int(h * scale), int(w * scale)
-                cur_x = F.interpolate(x, size=(cur_h, cur_w), mode="bilinear", align_corners=True)
+        for scale in scales:
+            cur_h, cur_w = int(h * scale), int(w * scale)
+            cur_x = F.interpolate(x, size=(cur_h, cur_w), mode="bilinear", align_corners=True)
 
-                out = F.softmax(self.base_forward(cur_x), dim=1)
-                out = F.interpolate(out, (h, w), mode="bilinear", align_corners=True)
-                final_result = out if final_result is None else (final_result + out)
+            out = F.softmax(self.base_forward(cur_x), dim=1)
+            out = F.interpolate(out, (h, w), mode="bilinear", align_corners=True)
+            final_result = out if final_result is None else (final_result + out)
 
-                out = F.softmax(self.base_forward(cur_x.flip(3)), dim=1).flip(3)
-                out = F.interpolate(out, (h, w), mode="bilinear", align_corners=True)
-                final_result += out
+            out = F.softmax(self.base_forward(cur_x.flip(3)), dim=1).flip(3)
+            out = F.interpolate(out, (h, w), mode="bilinear", align_corners=True)
+            final_result += out
 
-            return final_result
+        return final_result
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         img, mask, _ = batch["labeled"]
         # combine batches
         if "pseudolabeled" in batch:
@@ -86,32 +89,31 @@ class STPlusPlusModule(BaseModule):
         loss = self.criterion(pred, mask.long())
         return loss
 
-    def training_epoch_end(self, outputs) -> None:
+    def training_epoch_end(self, outputs: List[Dict[str, Tensor]]) -> None:
         if (self.current_epoch + 1) in [
             self.args.epochs // 3,
             self.args.epochs * 2 // 3,
             self.args.epochs,
         ]:
-            self.checkpoints.append(deepcopy(model))
+            self.checkpoints.append(deepcopy(self.model))
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: Tuple[Tensor, Tensor, str], batch_idx: int) -> Dict[str, float64]:
         img, mask, id = batch
         pred = self(img)
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
         self.log("mIOU", val_acc)
-        return {"val_acc": val_acc}
+        return {"mIOU": val_acc}
 
-    def validation_epoch_end(self, outputs):
-        val_acc = outputs[-1]["val_acc"]
-        log = {"mean mIOU": val_acc * 100}
-        mIOU = val_acc * 100.0
+    def validation_epoch_end(self, outputs: List[Dict[str, float64]]) -> Dict[str, Union[Dict[str, float64], float64]]:
+        mIOU = outputs[-1]["mIOU"]
+        log = {"mean mIOU": mIOU}
         if mIOU > self.previous_best:
             if self.previous_best != 0:
                 os.remove(
                     os.path.join(
                         self.args.save_path,
-                        "%s_%s_mIOU%.2f.pth" % (self.args.model, self.backbone_name, self.previous_best),
+                        "%s_mIOU%.2f.pth" % (self.args.model, self.previous_best),
                     )
                 )
             self.previous_best = mIOU
@@ -119,12 +121,12 @@ class STPlusPlusModule(BaseModule):
                 self.state_dict(),
                 os.path.join(
                     self.args.save_path,
-                    "%s_%s_mIOU%.2f.pth" % (self.args.model, self.backbone_name, mIOU),
+                    "%s_mIOU%.2f.pth" % (self.args.model, mIOU),
                 ),
             )
-        return {"log": log, "val_acc": val_acc}
+        return {"log": log, "mIOU": mIOU}
 
-    def predict_step(self, batch, batch_idx: int):
+    def predict_step(self, batch: List[Union[Tensor, Tuple[str]]], batch_idx: int) -> None:
         img, mask, id = batch
         if self.mode == "label":
             pred = self(img, tta=True)
@@ -134,7 +136,6 @@ class STPlusPlusModule(BaseModule):
                 "%s/%s" % (self.args.pseudo_mask_path, os.path.basename(id[0].split(" ")[1])),
                 pred,
             )
-            return [pred, mask, id]
         if self.mode == "select_reliable":
             preds = []
             for model in self.checkpoints:
@@ -147,7 +148,7 @@ class STPlusPlusModule(BaseModule):
             reliability = sum(mIOU) / len(mIOU)
             self.id_to_reliability.append((id[0], reliability))
 
-    def on_predict_epoch_end(self, results) -> None:
+    def on_predict_epoch_end(self) -> None:
         if self.mode == "select_reliable":
             labeled_ids = []
             with open(self.args.split_file_path, "r") as file:
@@ -224,7 +225,7 @@ if __name__ == "__main__":
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join("./", f"{args.save_path}"),
-        filename=f"{args.model}" + "-{epoch:02d}-{val_acc:.2f}",
+        filename=f"{args.model}" + "-{epoch:02d}-{mIOU:.2f}",
         mode="max",
         save_weights_only=True,
     )

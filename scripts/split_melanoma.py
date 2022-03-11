@@ -1,5 +1,6 @@
 import random
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 import yaml
@@ -14,9 +15,9 @@ csv_train_path = r"ISIC-2017_Training_Part3_GroundTruth(1).csv"
 csv_test_path = r"ISIC-2017_Validation_Part3_GroundTruth.csv"
 images_folder = "images"
 labels_folder = "labels"
-training_filelist = []
-val_filelist = []
-test_filelist = []
+training_filelist: List[str] = []
+val_filelist: List[str] = []
+test_filelist: List[str] = []
 
 training_filelist = pd.read_csv(csv_train_path)["image_id"].to_list()
 training_filelist = ["train/images/%s.jpg train/labels/%s_segmentation.png" % (f, f) for f in training_filelist]

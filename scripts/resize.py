@@ -9,7 +9,7 @@ new_name = "ISIC_Demo_2017_small"
 dirs = os.listdir(path)
 
 
-def resize_crop(img, base_size):
+def resize_crop(img: Image, base_size: int) -> Image:
     w, h = img.size
     if h > w:
         crop_size = w
