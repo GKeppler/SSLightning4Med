@@ -11,8 +11,6 @@ from numpy import float64, ndarray
 from torch import Tensor
 from wandb.sdk.data_types import Image
 
-from model.base_module import BaseModule
-
 EPS = 1e-10
 
 
@@ -125,7 +123,7 @@ def sigmoid_rampup(current: int, rampup_length: int = 200) -> float:
         return float(np.exp(-5.0 * phase * phase))
 
 
-def base_parse_args(LightningModule: BaseModule) -> Any:  # type: ignore
+def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser = ArgumentParser()
     # basic settings
     parser.add_argument(

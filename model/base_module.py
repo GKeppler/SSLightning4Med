@@ -42,7 +42,6 @@ class BaseModule(pl.LightningModule):
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
         self.log("mIOU", val_acc)
-        return {"mIOU": val_acc}
 
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch

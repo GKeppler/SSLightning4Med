@@ -76,6 +76,13 @@ class CCTModule(BaseModule):
         loss = supervised_loss + consistency_loss * consistency_weight
         return loss
 
+    def validation_step(self, batch, batch_idx):  # type: ignore
+        img, mask, id = batch
+        pred = self(img)[0]
+        self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
+        val_acc = self.metric.evaluate()[-1]
+        self.log("mIOU", val_acc)
+
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
         pred = self.model(img)[0]
@@ -99,7 +106,7 @@ if __name__ == "__main__":
         save_weights_only=True,
     )
     if args.use_wandb:
-        wandb.init(project="ST++", entity="gkeppler")
+        wandb.init(project="SSLightning4Med", entity="gkeppler")
         wandb_logger = WandbLogger(project="SSLightning4Med")
         wandb.define_metric("Pictures")
         wandb.define_metric("loss")
