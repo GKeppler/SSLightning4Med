@@ -1,19 +1,18 @@
 import os
 from argparse import ArgumentParser
 from typing import Any, Dict, List, Tuple
-import wandb
 
-
+import albumentations as A
 import pytorch_lightning as pl
+import torch
+import wandb
+from albumentations.pytorch import ToTensorV2
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
-import torch
 from torch import Tensor
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
 
 from data.data_module import SemiDataModule
 from model.base_module import BaseModule

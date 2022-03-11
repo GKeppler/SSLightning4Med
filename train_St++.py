@@ -1,22 +1,22 @@
 import os
 from argparse import ArgumentParser
 from copy import deepcopy
-import wandb
-import yaml
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import albumentations as A
 import cv2
 import numpy as np
-from typing import Any, Dict, List, Tuple, Union, Optional
-from numpy import float64
-
-import torch
-from torch import Tensor
-import torch.nn.functional as F
 import pytorch_lightning as pl
+import torch
+import torch.nn.functional as F
+import wandb
+import yaml
 from albumentations.pytorch import ToTensorV2
+from numpy import float64
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
-import albumentations as A
+from torch import Tensor
 
 from data.data_module import SemiDataModule
 from model.base_module import BaseModule
