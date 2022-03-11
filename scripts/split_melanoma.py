@@ -1,7 +1,8 @@
-import pandas as pd
 import random
-import yaml
 from pathlib import Path
+
+import pandas as pd
+import yaml
 from sklearn.model_selection import KFold
 
 # set basic params and load file list
@@ -18,17 +19,11 @@ val_filelist = []
 test_filelist = []
 
 training_filelist = pd.read_csv(csv_train_path)["image_id"].to_list()
-training_filelist = [
-    "train/images/%s.jpg train/labels/%s_segmentation.png" % (f, f)
-    for f in training_filelist
-]
+training_filelist = ["train/images/%s.jpg train/labels/%s_segmentation.png" % (f, f) for f in training_filelist]
 
 # all iamges are in this case in the train folder
 test_filelist = pd.read_csv(csv_test_path)["image_id"].to_list()
-test_filelist = [
-    "train/images/%s.jpg train/labels/%s_segmentation.png" % (f, f)
-    for f in test_filelist
-]
+test_filelist = ["train/images/%s.jpg train/labels/%s_segmentation.png" % (f, f) for f in test_filelist]
 
 list_len = len(training_filelist)
 print(training_filelist[:2], list_len)
@@ -41,9 +36,7 @@ for shuffle in range(num_shuffels):
         random.shuffle(training_filelist)
         # calc splitpoint
         labeled_splitpoint = int(list_len * float(eval(split)))
-        print(
-            f"splitpoint for {split} in dataset with list_len {list_len} are {labeled_splitpoint}"
-        )
+        print(f"splitpoint for {split} in dataset with list_len {list_len} are {labeled_splitpoint}")
         unlabeled = training_filelist[labeled_splitpoint:]
         labeled = training_filelist[:labeled_splitpoint]
         kf = KFold(n_splits=cross_val_splits)
@@ -52,9 +45,7 @@ for shuffle in range(num_shuffels):
             unlabeled_copy = unlabeled.copy()  # or elese it cant be reused
             train = [labeled[i] for i in train_index]
             val = [labeled[i] for i in val_index]
-            yaml_dict["val_split_" + str(count)] = dict(
-                unlabeled=unlabeled_copy, labeled=train, val=val
-            )
+            yaml_dict["val_split_" + str(count)] = dict(unlabeled=unlabeled_copy, labeled=train, val=val)
             count += 1
 
         # save to yaml

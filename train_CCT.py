@@ -1,113 +1,136 @@
-# the goal is to implement the the cct approa
+import os
+from argparse import ArgumentParser
 
-'''
-this is the implementation of the CCT SSL approach
-- custom unet with aux decoders 1-3
-'''
-import torch
+import albumentations as A
 import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
+import torch
+import wandb
+from albumentations.pytorch import ToTensorV2
 from pytorch_lightning import seed_everything
-from pytorch_lightning.loggers import TensorBoardLogger
-from torch.optim import SGD
-from model.unet import UNet_CCT
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch.nn import CrossEntropyLoss
+from torch.optim import SGD
+
 from data.data_module import SemiDataModule
-import numpy as np
-from utils import mulitmetrics
+from model.base_module import BaseModule
+from model.unet import UNet_CCT
+from utils import base_parse_args, mulitmetrics, sigmoid_rampup
 
-def sigmoid_rampup(current, rampup_length = 200):
-    """Exponential rampup from https://arxiv.org/abs/1610.02242"""
-    if rampup_length == 0:
-        return 1.0
-    else:
-        current = np.clip(current, 0.0, rampup_length)
-        phase = 1.0 - current / rampup_length
-        return float(np.exp(-5.0 * phase * phase))
 
-class CCTModule(pl.LightningModule):
+class CCTModule(BaseModule):
+    """
+    this is the implementation of the CCT SSL approach
+    - custom unet with aux decoders 1-3
+    """
+
+    @staticmethod
+    def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
+        parser = parent_parser.add_argument_group("LightiningModel")
+        parser = super(CCTModule, CCTModule).add_model_specific_args(parser)
+        parser.add_argument("--method", default="CCT")
+        return parent_parser
+
     def __init__(self, args):
-        super(CCTModule, self).__init__()
+        super(CCTModule, self).__init__(args)
         self.ce_loss = CrossEntropyLoss()
-        self.model = UNet_CCT(3,args.n_class)
+        self.model = UNet_CCT(in_chns=3, class_num=args.n_class)
         self.consistency = 0.1
         self.test_metrics = mulitmetrics(num_classes=args.n_class)
-        
+
     def training_step(self, batch):
         batch_unusupervised = batch["unlabeled"]
         batch_supervised = batch["labeled"]
 
-        #calculate all outputs based on the different decoders
+        # calculate all outputs based on the different decoders
         image_batch, label_batch, _ = batch_supervised
 
-        outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.model(
-            image_batch)
+        outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.model(image_batch)
         outputs_soft = torch.softmax(outputs, dim=1)
         outputs_aux1_soft = torch.softmax(outputs_aux1, dim=1)
         outputs_aux2_soft = torch.softmax(outputs_aux2, dim=1)
         outputs_aux3_soft = torch.softmax(outputs_aux3, dim=1)
-        #calc losses for labeled batch
-        loss_ce = self.ce_loss(outputs,
-                            label_batch)
-        loss_ce_aux1 = self.ce_loss(outputs_aux1,
-                                label_batch)
-        loss_ce_aux2 = self.ce_loss(outputs_aux2,
-                                label_batch)
-        loss_ce_aux3 = self.ce_loss(outputs_aux3,
-                                label_batch)
+        # calc losses for labeled batch
+        label_batch = label_batch.long()
+        loss_ce = self.ce_loss(outputs, label_batch)
+        loss_ce_aux1 = self.ce_loss(outputs_aux1, label_batch)
+        loss_ce_aux2 = self.ce_loss(outputs_aux2, label_batch)
+        loss_ce_aux3 = self.ce_loss(outputs_aux3, label_batch)
 
         supervised_loss = (loss_ce + loss_ce_aux1 + loss_ce_aux2 + loss_ce_aux3) / 4
 
-        #calucalate unsupervised loss
+        # calucalate unsupervised loss
         image_batch, _, _ = batch_unusupervised
-        outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.model(
-            image_batch)
+        outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.model(image_batch)
         # warmup unsup loss to avoid inital noise
         consistency_weight = self.consistency * sigmoid_rampup(self.current_epoch)
 
-        consistency_loss_aux1 = torch.mean(
-            (outputs_soft - outputs_aux1_soft) ** 2)
-        consistency_loss_aux2 = torch.mean(
-            (outputs_soft - outputs_aux2_soft) ** 2)
-        consistency_loss_aux3 = torch.mean(
-            (outputs_soft - outputs_aux3_soft) ** 2)
+        consistency_loss_aux1 = torch.mean((outputs_soft - outputs_aux1_soft) ** 2)
+        consistency_loss_aux2 = torch.mean((outputs_soft - outputs_aux2_soft) ** 2)
+        consistency_loss_aux3 = torch.mean((outputs_soft - outputs_aux3_soft) ** 2)
 
         consistency_loss = (consistency_loss_aux1 + consistency_loss_aux2 + consistency_loss_aux3) / 3
-        loss = supervised_loss + consistency_loss * consistency_weight 
+        loss = supervised_loss + consistency_loss * consistency_weight
         return loss
-        
-    def test_step(self, batch, batch_idx):
-        img, mask, id = batch
-        pred = self(img)
-        pred = torch.argmax(pred, dim=1).cpu()
-        self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
 
-    def test_epoch_end(self, outputs) -> None:
-        overall_acc, mIOU, mDICE = self.test_metric.evaluate()
-        self.log("accuracy", overall_acc)
-        self.log("mIOU", mIOU)
-        self.log("mDICE", mDICE)
-    
     def configure_optimizers(self):
-        optimizer = SGD(
-            self.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4 
-        )
+        optimizer = SGD(self.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
         return [optimizer]
 
 
-
 if __name__ == "__main__":
+    args = base_parse_args(CCTModule)
     seed_everything(123, workers=True)
-    trainer = pl.Trainer(
-        logger= TensorBoardLogger("./tb_logs"),
-        gpus=[0],
+
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=os.path.join("./", f"{args.save_path}"),
+        filename=f"{args.model}" + "-{epoch:02d}-{val_acc:.2f}",
+        mode="max",
+        save_weights_only=True,
     )
-    Datamodule = SemiDataModule(
-            root_dir="/home/gustav/datasets/ISIC_Demo_2017_small",
-            split_yaml_path = "dataset/splits/melanoma/laptop_test/train_laptop.yaml",
-            batch_size = 4,
-            mode="semi_train"
-            )
-    
-    cct = CCTModule(args)
-    trainer.fit(model = cct, datamodule = Datamodule)
+    if args.use_wandb:
+        wandb.init(project="ST++", entity="gkeppler")
+        wandb_logger = WandbLogger(project="SSLightning4Med")
+        wandb.define_metric("Pictures")
+        wandb.define_metric("loss")
+        wandb.define_metric("mIOU")
+        wandb.config.update(args)
+
+    dev_run = False  # not working when predicting with best_model checkpoint
+    trainer = pl.Trainer.from_argparse_args(
+        args,
+        fast_dev_run=dev_run,
+        max_epochs=args.epochs,
+        log_every_n_steps=2,
+        logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
+        callbacks=[checkpoint_callback],
+        # gpus=[0],
+        accelerator="cpu",
+        # profiler="pytorch"
+    )
+
+    # Declare an augmentation pipelines
+    a_train_transforms = A.Compose(
+        [
+            A.LongestMaxSize(args.base_size),
+            A.RandomScale(scale_limit=[0, 5, 2], p=1),
+            A.RandomCrop(args.crop_size, args.crop_size),
+            A.HorizontalFlip(p=0.5),
+            A.Normalize(),
+            ToTensorV2(),
+        ]
+    )
+
+    dataModule = SemiDataModule(
+        root_dir=args.data_root,
+        batch_size=args.batch_size,
+        split_yaml_path=args.split_file_path,
+        test_yaml_path=args.test_file_path,
+        pseudo_mask_path=args.pseudo_mask_path,
+        train_transforms=a_train_transforms,
+        mode="semi_train",
+    )
+
+    model = CCTModule(args)
+    trainer.fit(model=model, datamodule=dataModule)
+    trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)

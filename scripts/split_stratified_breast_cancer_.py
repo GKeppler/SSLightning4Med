@@ -1,8 +1,9 @@
 import random
 from os import listdir
 from os.path import isfile, join
-import yaml
 from pathlib import Path
+
+import yaml
 from sklearn.model_selection import StratifiedKFold
 
 # set basic params and load file list
@@ -33,9 +34,7 @@ differences = set(
     ]
 ).symmetric_difference(set(training_filelist))
 if len(differences) != 0:
-    raise Exception(
-        f"files in folders '{images_folder}' and '{labels_folder}' do not match because of: {differences}"
-    )
+    raise Exception(f"files in folders '{images_folder}' and '{labels_folder}' do not match because of: {differences}")
 
 test_filelist = [
     "test/images/%s test/labels/%s_mask.png" % (f, f[:-4])
@@ -53,9 +52,7 @@ for shuffle in range(num_shuffels):
         random.shuffle(training_filelist)
         # calc splitpoint
         labeled_splitpoint = int(list_len * float(eval(split)))
-        print(
-            f"splitpoint for {split} in dataset with list_len {list_len} are {labeled_splitpoint}"
-        )
+        print(f"splitpoint for {split} in dataset with list_len {list_len} are {labeled_splitpoint}")
         unlabeled = training_filelist[labeled_splitpoint:]
         labeled = training_filelist[:labeled_splitpoint]
         skf = StratifiedKFold(n_splits=cross_val_splits)
@@ -65,9 +62,7 @@ for shuffle in range(num_shuffels):
             unlabeled_copy = unlabeled.copy()  # or elese it cant be reused
             train = [labeled[i] for i in train_index]
             val = [labeled[i] for i in val_index]
-            yaml_dict["val_split_" + str(count)] = dict(
-                unlabeled=unlabeled_copy, labeled=train, val=val
-            )
+            yaml_dict["val_split_" + str(count)] = dict(unlabeled=unlabeled_copy, labeled=train, val=val)
             count += 1
 
         # save to yaml

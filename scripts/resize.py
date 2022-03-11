@@ -1,6 +1,7 @@
 # this notebook resizes all images in a folder to center crop
-from PIL import Image
 import os
+
+from PIL import Image
 
 path = "/home/gustav/datasets/ISIC_Demo_2017/"
 old_name = "ISIC_Demo_2017"
@@ -22,7 +23,7 @@ def resize_crop(img, base_size):
     img = img.crop((left, top, right, bottom))
 
     # resize to base_size
-    img = img.resize((base_size, base_size), Image.BILINEAR)
+    img = img.resize((base_size, base_size), Image.NEAREST)
     return img
 
 
