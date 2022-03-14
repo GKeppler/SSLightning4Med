@@ -4,11 +4,11 @@ from typing import Any, Tuple
 
 import cv2
 import numpy as np
-import pytorch_lightning as pl
 import wandb
 from medpy import metric
 from numpy import ndarray
 from torch import Tensor
+import pytorch_lightning as pl
 from wandb.sdk.data_types import Image
 
 EPS = 1e-10

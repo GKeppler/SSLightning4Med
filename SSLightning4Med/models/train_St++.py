@@ -18,7 +18,7 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch import Tensor
 
 from data.data_module import SemiDataModule
-from model.base_module import BaseModule
+from base_model import BaseModule
 from utils import base_parse_args, meanIOU
 
 

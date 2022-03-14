@@ -1,6 +1,7 @@
 # SSLightning4Med
 
-This is the official [Pytorch Lightning](https://github.com/PyTorchLightning/pytorch-lightning) implementation of my thesis.
+
+This is the official  [Pytorch Lightning](https://github.com/PyTorchLightning/pytorch-lightning) implementation of my thesis about semi supervised learning in medical image segmentation.
 
 ## Installation
 
@@ -56,6 +57,64 @@ val_split_0:
   - train/images/example_image5.png train/labels/example_mask5.png
   - train/images/example_image6.png train/labels/example_mask6.png
 ```
+
+
+
+Project Organization
+------------
+
+    ├── LICENSE
+    ├── Makefile           <- Makefile with commands like `make data` or `make train`
+    ├── README.md          <- The top-level README for developers using this project.
+    ├── data
+    │   ├── processed      <- The final, canonical data sets for modeling.
+    │   └── raw            <- The original, immutable data dump.
+    │
+    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
+    │
+    ├── models             <- Trained and serialized models, model predictions, or model summaries
+    │
+    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
+    │                         the creator's initials, and a short `-` delimited description, e.g.
+    │                         `1.0-jqp-initial-data-exploration`.
+    │
+    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
+    │
+    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
+    │   └── figures        <- Generated graphics and figures to be used in reporting
+    │
+    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
+    │                         generated with `pip freeze > requirements.txt`
+    │
+    ├── setup.py           <- makes project pip installable (pip install -e .) so SSLightning4Med can be imported
+    ├── SSLightning4Med                <- Source code for use in this project.
+    │   ├── __init__.py    <- Makes SSLightning4Med a Python module
+    │   │
+    │   ├── data           <- Scripts to download data and generate the split files
+    │   │   ├── splits
+    │   │   │       ├── [Dataset]
+    │   │   │           ├── 1
+    │   │   │               ├── split_0
+    │   │   │                   └── split.yaml  
+    │   │   └── make_dataset.py
+    │   │
+    │   ├── features       <- Scripts to turn raw data into features for modeling
+    │   │   └── build_features.py
+    │   │
+    │   ├── models         <- Scripts to train models and then use trained models to make
+    │   │   │                 predictions
+    │   │   ├── predict_model.py
+    │   │   └── train_model.py
+    │   │
+    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
+    │       └── visualize.py
+    │
+    └── .pre-commit-config.yaml            <- pre commit file for a clean repository
+
+
+--------
+
+<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
 
 ## Augmentations => [Albumentations](https://albumentations.ai/)
 

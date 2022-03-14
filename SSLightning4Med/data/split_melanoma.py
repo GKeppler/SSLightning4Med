@@ -56,14 +56,14 @@ for shuffle in range(num_shuffels):
             zw[1] = "_"
         split = "".join(zw)
 
-        yaml_path = rf"dataset/splits/{dataset}/{split}/split_{shuffle}"
+        yaml_path = rf"data/splits/{dataset}/{split}/split_{shuffle}"
         Path(yaml_path).mkdir(parents=True, exist_ok=True)
         with open(yaml_path + "/split.yaml", "w+") as outfile:
             yaml.dump(yaml_dict, outfile, default_flow_style=False)
 
 # test yaml file
 yaml_dict = {}
-yaml_path = rf"dataset/splits/{dataset}/"
+yaml_path = rf"datas/splits/{dataset}/"
 Path(yaml_path).mkdir(parents=True, exist_ok=True)
 
 with open(yaml_path + "/test_valset.yaml", "w+") as outfile:
