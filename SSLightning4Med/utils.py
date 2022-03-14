@@ -180,11 +180,15 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.n_class is None:
         args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2}[args.dataset]
     if args.split_file_path is None:
-        args.split_file_path = f"data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
+        args.split_file_path = (
+            f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
+        )
     if args.test_file_path is None:
-        args.test_file_path = f"data/splits/{args.dataset}/test.yaml"
+        args.test_file_path = f"SSLightning4Med/data/splits/{args.dataset}/test.yaml"
     if args.pseudo_mask_path is None:
-        args.pseudo_mask_path = f"data/pseudo_masks/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
+        args.pseudo_mask_path = (
+            f"SSLightning4Med/data/pseudo_masks/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
+        )
     if args.save_path is None:
         args.save_path = f"models/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
     if args.reliable_id_path is None:
