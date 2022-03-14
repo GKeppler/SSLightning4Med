@@ -17,16 +17,16 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch import Tensor
 
-from data.data_module import SemiDataModule
-from base_model import BaseModule
-from utils import base_parse_args, meanIOU
+from SSLightning4Med.data.data_module import SemiDataModule
+from SSLightning4Med.models.base_model import BaseModel
+from SSLightning4Med.utils import base_parse_args, meanIOU
 
 
-class STPlusPlusModule(BaseModule):
+class STPlusPlusModel(BaseModel):
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
         parser = parent_parser.add_argument_group("LightiningModel")
-        parser = super(STPlusPlusModule, STPlusPlusModule).add_model_specific_args(parser)
+        parser = super(STPlusPlusModel, STPlusPlusModel).add_model_specific_args(parser)
         parser.add_argument("--method", default="St++")
         parser.add_argument(
             "--plus",
@@ -38,7 +38,7 @@ class STPlusPlusModule(BaseModule):
         return parent_parser
 
     def __init__(self, args: Any) -> None:
-        super(STPlusPlusModule, self).__init__(args)
+        super(STPlusPlusModel, self).__init__(args)
         self.checkpoints: List[torch.nn.Module] = []
         self.id_to_reliability: List[Tuple] = []
         self.previous_best: float = 0.0
@@ -171,7 +171,7 @@ class STPlusPlusModule(BaseModule):
 
 if __name__ == "__main__":
 
-    args = base_parse_args(STPlusPlusModule)
+    args = base_parse_args(STPlusPlusModel)
 
     seed_everything(123, workers=True)
 
@@ -219,7 +219,7 @@ if __name__ == "__main__":
         mode="train",
     )
 
-    model = STPlusPlusModule(args)
+    model = STPlusPlusModel(args)
 
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
@@ -262,7 +262,7 @@ if __name__ == "__main__":
 
         # <======================== Re-training on labeled and unlabeled images ========================>
 
-        model = STPlusPlusModule(args)
+        model = STPlusPlusModel(args)
 
         # increase max epochs to double the amount
         trainer.fit_loop.max_epochs = args.epochs * 2
@@ -279,7 +279,7 @@ if __name__ == "__main__":
         trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
         # <================================== The 1st stage re-training ==================================>
 
-        model = STPlusPlusModule(args)
+        model = STPlusPlusModel(args)
 
         # increase max epochs to double the amount
         trainer.fit_loop.max_epochs = args.epochs * 3
@@ -293,7 +293,7 @@ if __name__ == "__main__":
         trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
         # <================================== The 2nd stage re-training ==================================>
-        model = STPlusPlusModule(args)
+        model = STPlusPlusModel(args)
 
         # increase max epochs to double the amount
         trainer.fit_loop.max_epochs = args.epochs * 4

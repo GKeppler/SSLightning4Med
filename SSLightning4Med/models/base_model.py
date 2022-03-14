@@ -6,15 +6,15 @@ import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD
 
-from nets.unet import SmallUNet, UNet, UNet_CCT
-from utils import meanIOU, mulitmetrics, wandb_image_mask
+from SSLightning4Med.nets.unet import SmallUNet, UNet, UNet_CCT
+from SSLightning4Med.utils import meanIOU, mulitmetrics, wandb_image_mask
 
 model_zoo = {"unet": UNet, "smallUnet": SmallUNet, "unet_cct": UNet_CCT}
 
 
-class BaseModule(pl.LightningModule):
+class BaseModel(pl.LightningModule):
     def __init__(self, args) -> None:  # type: ignore
-        super(BaseModule, self).__init__()
+        super(BaseModel, self).__init__()
         self.model = model_zoo[args.model](in_chns=3, class_num=args.n_class)
         self.metric = meanIOU(num_classes=args.n_class)
         self.predict_metric = meanIOU(num_classes=args.n_class)

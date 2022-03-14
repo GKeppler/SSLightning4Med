@@ -14,13 +14,18 @@ from torch import Tensor
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD
 
-from data.data_module import SemiDataModule
-from base_model import BaseModule
-from nets.unet import UNet_CCT
-from utils import base_parse_args, mulitmetrics, sigmoid_rampup, wandb_image_mask
+from SSLightning4Med.data.data_module import SemiDataModule
+from SSLightning4Med.models.base_model import BaseModel
+from SSLightning4Med.nets.unet import UNet_CCT
+from SSLightning4Med.utils import (
+    base_parse_args,
+    mulitmetrics,
+    sigmoid_rampup,
+    wandb_image_mask,
+)
 
 
-class CCTModule(BaseModule):
+class CCTModule(BaseModel):
     """
     this is the implementation of the CCT SSL approach
     - custom unet with aux decoders 1-3

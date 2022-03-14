@@ -4,11 +4,11 @@ from typing import Any, Tuple
 
 import cv2
 import numpy as np
+import pytorch_lightning as pl
 import wandb
 from medpy import metric
 from numpy import ndarray
 from torch import Tensor
-import pytorch_lightning as pl
 from wandb.sdk.data_types import Image
 
 EPS = 1e-10
@@ -170,6 +170,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer",
             "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
         }[args.dataset]
+
     if args.epochs is None:
         args.epochs = {"melanoma": 80}[args.dataset]
     if args.crop_size is None:

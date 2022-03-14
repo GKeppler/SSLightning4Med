@@ -6,7 +6,7 @@ from albumentations.core.composition import Compose
 from pytorch_lightning.trainer.supporters import CombinedLoader
 from torch.utils.data import DataLoader
 
-from data.dataset import BaseDataset
+from SSLightning4Med.data.dataset import BaseDataset
 
 
 class SemiDataModule(pl.LightningDataModule):
