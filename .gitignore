@@ -5,7 +5,7 @@ outdir/*
 model_checkpoints/*
 wandb/*
 tb_logs/*
-data/splits/*
+data/splits/melanoma/laptop_test/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
