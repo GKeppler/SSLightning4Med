@@ -12,7 +12,6 @@ import torch.nn.functional as F
 import wandb
 import yaml
 from albumentations.pytorch import ToTensorV2
-from numpy import float64
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
@@ -97,7 +96,7 @@ class STPlusPlusModule(BaseModule):
         ]:
             self.checkpoints.append(deepcopy(self.model))
 
-    def validation_step(self, batch: Tuple[Tensor, Tensor, str], batch_idx: int) -> Dict[str, float64]:
+    def validation_step(self, batch: Tuple[Tensor, Tensor, str], batch_idx: int) -> Dict[str, float]:
         img, mask, id = batch
         pred = self(img)
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
@@ -105,7 +104,7 @@ class STPlusPlusModule(BaseModule):
         self.log("mIOU", val_acc)
         return {"mIOU": val_acc}
 
-    def validation_epoch_end(self, outputs: List[Dict[str, float64]]) -> Dict[str, Union[Dict[str, float64], float64]]:
+    def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
         mIOU = outputs[-1]["mIOU"]
         log = {"mean mIOU": mIOU}
         if mIOU > self.previous_best:

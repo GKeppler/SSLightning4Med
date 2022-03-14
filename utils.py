@@ -7,7 +7,7 @@ import numpy as np
 import pytorch_lightning as pl
 import wandb
 from medpy import metric
-from numpy import float64, ndarray
+from numpy import ndarray
 from torch import Tensor
 from wandb.sdk.data_types import Image
 
@@ -31,7 +31,7 @@ class meanIOU:
         for lp, lt in zip(predictions, gts):
             self.hist += self._fast_hist(lp.flatten(), lt.flatten())
 
-    def evaluate(self) -> Tuple[ndarray, float64]:
+    def evaluate(self) -> Tuple[ndarray, float]:
         iu = np.diag(self.hist) / (self.hist.sum(axis=1) + self.hist.sum(axis=0) - np.diag(self.hist) + EPS)
         return iu, np.nanmean(iu)
 
@@ -54,7 +54,7 @@ class mulitmetrics:
         for lp, lt in zip(predictions, gts):
             self.hist += self._fast_hist(lp.flatten(), lt.flatten())
 
-    def evaluate(self) -> Tuple[float64, float64, float64]:
+    def evaluate(self) -> Tuple[float, float, float]:
         A_inter_B = np.diag(self.hist)
         A = self.hist.sum(axis=1)
         B = self.hist.sum(axis=0)
@@ -74,7 +74,7 @@ class mulitmetrics:
         return overall_acc, meanIOU, avg_dice
 
 
-def calculate_metric_percase(pred: ndarray, gt: ndarray) -> Tuple[float64, float64, float64, float64]:
+def calculate_metric_percase(pred: ndarray, gt: ndarray) -> Tuple[float, float, float, float]:
     dc = metric.binary.dc(pred, gt)
     jc = metric.binary.jc(pred, gt)
     hd = metric.binary.hd95(pred, gt)
@@ -127,17 +127,16 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser = ArgumentParser()
     # basic settings
     parser.add_argument(
-        "--data-root",
-        type=str,
-        default="/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer",
-    )
-    parser.add_argument(
         "--dataset",
         type=str,
         choices=["melanoma", "pneumothorax", "breastCancer"],
         default="breastCancer",
     )
-
+    parser.add_argument(
+        "--data-root",
+        type=str,
+        default=None,
+    )
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--crop-size", type=int, default=None)
@@ -163,25 +162,26 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     # ie: now --gpus --num_nodes ... --fast_dev_run all work in the cli
     parser = pl.Trainer.add_argparse_args(parser)
     args = parser.parse_args()
-
+    if args.method is None:
+        raise ValueError("no methodname in model_specific_args.")
+    if args.data_root is None:
+        args.base_size = {
+            "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017",
+            "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer",
+            "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
+        }[args.dataset]
     if args.epochs is None:
         args.epochs = {"melanoma": 80}[args.dataset]
     if args.crop_size is None:
-        args.crop_size = {
-            "melanoma": 256,
-            "breastCancer": 256,
-        }[args.dataset]
+        args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256}[args.dataset]
     if args.base_size is None:
-        args.base_size = {
-            "melanoma": 256,
-            "breastCancer": 500,
-        }[args.dataset]
+        args.base_size = {"melanoma": 256, "breastCancer": 500, "pneumothorax": 256}[args.dataset]
     if args.n_class is None:
-        args.n_class = {"melanoma": 2, "breastCancer": 3}[args.dataset]
+        args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2}[args.dataset]
     if args.split_file_path is None:
-        args.split_file_path = f"dataset/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
+        args.split_file_path = f"data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
     if args.test_file_path is None:
-        args.test_file_path = f"dataset/splits/{args.dataset}/test.yaml"
+        args.test_file_path = f"data/splits/{args.dataset}/test.yaml"
     if args.pseudo_mask_path is None:
         args.pseudo_mask_path = f"outdir/{args.method}/pseudo_masks/{args.dataset}/{args.split}/split_{args.shuffle}"
     if args.save_path is None:
