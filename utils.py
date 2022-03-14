@@ -166,7 +166,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         raise ValueError("no methodname in model_specific_args.")
     if args.data_root is None:
         args.data_root = {
-            "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017",
+            "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
             "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer",
             "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
         }[args.dataset]

@@ -3,9 +3,9 @@ import os
 
 from PIL import Image
 
-path = "/home/gustav/datasets/ISIC_Demo_2017/"
+path = "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017/"
 old_name = "ISIC_Demo_2017"
-new_name = "ISIC_Demo_2017_small"
+new_name = "ISIC_Demo_2017_cropped"
 dirs = os.listdir(path)
 
 
@@ -30,9 +30,10 @@ def resize_crop(img: Image, base_size: int) -> Image:
 for path, subdirs, files in os.walk(path):
     for name in files:
         img_path = os.path.join(path, name)
-        im = Image.open(img_path)
-        imResize = resize_crop(im, 512)
-        img_path_new = img_path.replace(old_name, new_name)
-        if not os.path.exists(os.path.dirname(img_path_new)):
-            os.makedirs(os.path.dirname(img_path_new))
-        imResize.save(img_path_new)
+        if img_path.lower().endswith((".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".gif")):
+            im = Image.open(img_path)
+            imResize = resize_crop(im, 512)
+            img_path_new = img_path.replace(old_name, new_name)
+            if not os.path.exists(os.path.dirname(img_path_new)):
+                os.makedirs(os.path.dirname(img_path_new))
+            imResize.save(img_path_new)
