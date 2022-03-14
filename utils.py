@@ -130,7 +130,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         "--dataset",
         type=str,
         choices=["melanoma", "pneumothorax", "breastCancer"],
-        default="breastCancer",
+        default="melanoma",
     )
     parser.add_argument(
         "--data-root",
@@ -165,7 +165,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.method is None:
         raise ValueError("no methodname in model_specific_args.")
     if args.data_root is None:
-        args.base_size = {
+        args.data_root = {
             "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017",
             "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer",
             "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
