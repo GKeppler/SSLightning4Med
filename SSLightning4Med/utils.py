@@ -183,11 +183,11 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.test_file_path is None:
         args.test_file_path = f"data/splits/{args.dataset}/test.yaml"
     if args.pseudo_mask_path is None:
-        args.pseudo_mask_path = f"outdir/{args.method}/pseudo_masks/{args.dataset}/{args.split}/split_{args.shuffle}"
+        args.pseudo_mask_path = f"data/pseudo_masks/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
     if args.save_path is None:
-        args.save_path = f"outdir/{args.method}/models/{args.dataset}/{args.split}/split_{args.shuffle}"
+        args.save_path = f"models/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
     if args.reliable_id_path is None:
-        args.reliable_id_path = f"outdir/{args.method}/reliable_ids/{args.dataset}/{args.split}/split_{args.shuffle}"
+        args.reliable_id_path = f"data/reliable_ids/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
 
     if not os.path.exists(args.save_path):
         os.makedirs(args.save_path)
