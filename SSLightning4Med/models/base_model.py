@@ -16,12 +16,15 @@ class BaseModel(pl.LightningModule):
     def __init__(self, args) -> None:  # type: ignore
         super(BaseModel, self).__init__()
         self.model = model_zoo[args.model](in_chns=3, class_num=args.n_class)
-        self.metric = meanIOU(num_classes=args.n_class)
-        self.predict_metric = meanIOU(num_classes=args.n_class)
-        self.test_metrics = mulitmetrics(num_classes=args.n_class)
         self.criterion = CrossEntropyLoss()
         self.previous_best = 0.0
         self.args = args
+        self.set_metrics()
+
+    def set_metrics(self):
+        self.metric = meanIOU(num_classes=self.args.n_class)
+        self.predict_metric = meanIOU(num_classes=self.args.n_class)
+        self.test_metrics = mulitmetrics(num_classes=self.args.n_class)
 
     @staticmethod
     def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:

@@ -1,6 +1,6 @@
 import os
 from argparse import ArgumentParser
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import albumentations as A
 import pytorch_lightning as pl
@@ -86,8 +86,13 @@ class CCTModule(BaseModel):
         pred = self(img)[0]
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
+        return {"mIOU": val_acc}
 
-        self.log("mIOU", val_acc)
+    def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
+        mIOU = outputs[-1]["mIOU"]
+        self.log("mIOU", mIOU)
+        # reset metrics
+        self.set_metrics()
 
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
@@ -112,7 +117,7 @@ if __name__ == "__main__":
         save_weights_only=True,
     )
     if args.use_wandb:
-        wandb.init(project="SSLightning4Med", entity="gkeppler")
+        wandb.init(project="cct", entity="gkeppler")
         wandb_logger = WandbLogger(project="SSLightning4Med")
         wandb.define_metric("Pictures")
         wandb.define_metric("loss")

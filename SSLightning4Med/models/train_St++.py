@@ -108,7 +108,6 @@ class STPlusPlusModel(BaseModel):
     def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
         mIOU = outputs[-1]["mIOU"]
         self.log("mIOU", mIOU)
-        print("val mIOU", mIOU)
         if mIOU > self.previous_best:
             if self.previous_best != 0:
                 os.remove(
@@ -125,6 +124,7 @@ class STPlusPlusModel(BaseModel):
                     "%s_mIOU%.2f.pth" % (self.args.model, mIOU),
                 ),
             )
+        self.set_metrics()
 
     def predict_step(self, batch: List[Union[Tensor, Tuple[str]]], batch_idx: int) -> None:
         img, mask, id = batch
@@ -169,6 +169,7 @@ class STPlusPlusModel(BaseModel):
 
             with open(os.path.join(self.args.reliable_id_path, "reliable_ids.yaml"), "w+") as outfile:
                 yaml.dump(yaml_dict, outfile, default_flow_style=False)
+        self.set_metrics()
 
 
 if __name__ == "__main__":
