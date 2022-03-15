@@ -19,7 +19,7 @@ from torch import Tensor
 
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils import base_parse_args, meanIOU
+from SSLightning4Med.utils import base_parse_args, get_color_map, meanIOU
 
 
 class STPlusPlusModel(BaseModel):
@@ -205,7 +205,7 @@ if __name__ == "__main__":
             ToTensorV2(),
         ]
     )
-
+    color_map = get_color_map(args.dataset)
     dataModule = SemiDataModule(
         root_dir=args.data_root,
         batch_size=args.batch_size,
@@ -217,6 +217,7 @@ if __name__ == "__main__":
         train_transforms=a_train_transforms_labeled,
         train_transforms_unlabeled=a_train_transforms_unlabeled,
         mode="train",
+        color_map=color_map,
     )
 
     model = STPlusPlusModel(args)

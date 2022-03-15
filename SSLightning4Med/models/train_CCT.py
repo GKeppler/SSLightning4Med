@@ -19,6 +19,7 @@ from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.unet import UNet_CCT
 from SSLightning4Med.utils import (
     base_parse_args,
+    get_color_map,
     mulitmetrics,
     sigmoid_rampup,
     wandb_image_mask,
@@ -143,6 +144,8 @@ if __name__ == "__main__":
         ]
     )
 
+    color_map = get_color_map(args.dataset)
+
     dataModule = SemiDataModule(
         root_dir=args.data_root,
         batch_size=args.batch_size,
@@ -151,6 +154,7 @@ if __name__ == "__main__":
         pseudo_mask_path=args.pseudo_mask_path,
         train_transforms=a_train_transforms,
         mode="semi_train",
+        color_map=color_map,
     )
 
     model = CCTModule(args)
