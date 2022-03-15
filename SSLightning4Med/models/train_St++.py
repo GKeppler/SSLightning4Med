@@ -19,7 +19,7 @@ from torch import Tensor
 
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils import base_parse_args, meanIOU
+from SSLightning4Med.utils import base_parse_args, get_color_map, meanIOU
 
 
 class STPlusPlusModel(BaseModel):
@@ -31,7 +31,7 @@ class STPlusPlusModel(BaseModel):
         parser.add_argument(
             "--plus",
             dest="plus",
-            default=True,
+            default=False,
             help="whether to use ST++",
         )
         parser.add_argument("--use-tta", default=True, help="whether to use Test Time Augmentation")
@@ -44,6 +44,7 @@ class STPlusPlusModel(BaseModel):
         self.previous_best: float = 0.0
         self.args = args
         self.mode = "label"
+        self.color_map = get_color_map(args.dataset)
 
     def base_forward(self, x: Tensor) -> Tensor:
         h, w = x.shape[-2:]
@@ -101,12 +102,13 @@ class STPlusPlusModel(BaseModel):
         pred = self(img)
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
-        self.log("mIOU", val_acc)
+        # self.log("mIOU", val_acc)
         return {"mIOU": val_acc}
 
     def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
         mIOU = outputs[-1]["mIOU"]
-        log = {"mean mIOU": mIOU}
+        self.log("mIOU", mIOU)
+        print("val mIOU", mIOU)
         if mIOU > self.previous_best:
             if self.previous_best != 0:
                 os.remove(
@@ -123,7 +125,6 @@ class STPlusPlusModel(BaseModel):
                     "%s_mIOU%.2f.pth" % (self.args.model, mIOU),
                 ),
             )
-        return {"log": log, "mIOU": mIOU}
 
     def predict_step(self, batch: List[Union[Tensor, Tuple[str]]], batch_idx: int) -> None:
         img, mask, id = batch
@@ -131,10 +132,10 @@ class STPlusPlusModel(BaseModel):
             pred = self(img, tta=True)
             pred = torch.argmax(pred, dim=1).cpu()
             pred = pred.squeeze(0).numpy().astype(np.uint8)
-            pred = np.array(self.args.color_map)[pred]
+            pred = np.array(self.color_map)[pred]
             cv2.imwrite(
                 "%s/%s" % (self.args.pseudo_mask_path, os.path.basename(id[0].split(" ")[1])),
-                pred,
+                cv2.cvtColor(pred.astype(np.uint8), cv2.COLOR_BGR2RGB),
             )
         if self.mode == "select_reliable":
             preds = []
@@ -206,6 +207,7 @@ if __name__ == "__main__":
             ToTensorV2(),
         ]
     )
+    color_map = get_color_map(args.dataset)
     dataModule = SemiDataModule(
         root_dir=args.data_root,
         batch_size=args.batch_size,
@@ -217,7 +219,7 @@ if __name__ == "__main__":
         train_transforms=a_train_transforms_labeled,
         train_transforms_unlabeled=a_train_transforms_unlabeled,
         mode="train",
-        color_map=args.color_map,
+        color_map=color_map,
     )
 
     model = STPlusPlusModel(args)
@@ -245,8 +247,8 @@ if __name__ == "__main__":
         log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
-        # gpus=[0],
-        accelerator="cpu",
+        gpus=[0],
+        # accelerator="cpu",
         # profiler="pytorch"
     )
     # <====================== Supervised training with labeled images (SupOnly) ======================>

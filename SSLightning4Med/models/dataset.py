@@ -20,9 +20,9 @@ class BaseDataset:
         self,
         root_dir: str,
         id_list: List[str],
+        color_map: ndarray,
         pseudo_mask_path: Optional[str] = None,
         transform: Optional[Compose] = None,
-        color_map: Optional[ndarray] = None,
     ) -> None:
         self.root_dir = root_dir
         self.id_list = id_list
@@ -42,29 +42,23 @@ class BaseDataset:
         self.color_map = color_map
 
     @staticmethod
-    def _preprocess_mask(mask: ndarray, color_map: Optional[ndarray] = None) -> ndarray:
-        mask = mask.astype(np.float32)
-        if color_map is None:
-            # binary
-            color_map = [
-                [0, 0, 0],
-                [255, 255, 255],
-            ]
-            # multiclass problem
-            # This function converts a mask from the Pascal VOC format to the format required by AutoAlbument.
-            #
-            # Pascal VOC uses an RGB image to encode the segmentation mask for that image. RGB values of a pixel
-            # encode the pixel's class.
-            #
-            # AutoAlbument requires a segmentation mask to be a NumPy array with the shape [height, width, num_classes].
-            # Each channel in this mask should encode values for a single class. Pixel in a mask channel should have
-            # a value of 1.0 if the pixel of the image belongs to this class and 0.0 otherwise.
-            mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
-            height, width = mask.shape[:2]
-            segmentation_mask = np.zeros((height, width, len(color_map)), dtype=np.float32)
-            for label_index, label in enumerate(color_map):
-                segmentation_mask[:, :, label_index] = np.all(mask == label, axis=-1).astype(float)
-            return segmentation_mask
+    def _preprocess_mask(mask: ndarray, color_map: ndarray) -> ndarray:
+        # mask = mask.astype(np.float32)
+        # multiclass problem
+        # This function converts a mask from the Pascal VOC format to the format required by AutoAlbument.
+        #
+        # Pascal VOC uses an RGB image to encode the segmentation mask for that image. RGB values of a pixel
+        # encode the pixel's class.
+        #
+        # AutoAlbument requires a segmentation mask to be a NumPy array with the shape [height, width, num_classes].
+        # Each channel in this mask should encode values for a single class. Pixel in a mask channel should have
+        # a value of 1.0 if the pixel of the image belongs to this class and 0.0 otherwise.
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
+        height, width = mask.shape[:2]
+        segmentation_mask = np.zeros((height, width, len(color_map)), dtype=np.float32)
+        for label_index, label in enumerate(color_map):
+            segmentation_mask[:, :, label_index] = np.all(mask == label, axis=-1).astype(float)
+        return segmentation_mask
 
     def __len__(self) -> int:
         return len(self.id_list)
@@ -85,7 +79,7 @@ class BaseDataset:
         else:
             mask = cv2.imread(os.path.join(self.root_dir, id.split(" ")[1]), cv2.IMREAD_UNCHANGED)
 
-        mask = self._preprocess_mask(mask)
+        mask = self._preprocess_mask(mask, self.color_map)
         transformed = self.transform(image=image, mask=mask)
         image = transformed["image"]
         mask = transformed["mask"]

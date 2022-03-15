@@ -70,6 +70,13 @@ class SemiDataModule(pl.LightningDataModule):
             transform=self.train_transforms_unlabeled,
             color_map=self.color_map,
         )
+        self.predict_dataset = BaseDataset(
+            root_dir=self.root_dir,
+            id_list=val_split_0["unlabeled"],
+            transform=self.train_transforms,
+            color_map=self.color_map,
+        )
+
         self.val_dataset = BaseDataset(
             root_dir=self.root_dir, transform=self.val_transforms, id_list=val_split_0["val"], color_map=self.color_map
         )
@@ -122,7 +129,7 @@ class SemiDataModule(pl.LightningDataModule):
 
     def predict_dataloader(self) -> DataLoader:
         return DataLoader(
-            self.unlabeled_dataset,
+            self.predict_dataset,
             batch_size=1,
             num_workers=self.num_workers,
         )

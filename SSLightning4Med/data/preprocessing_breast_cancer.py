@@ -22,9 +22,9 @@ for path, subdirs, files in os.walk(path):
         for i, old_name in enumerate(old_names):
             if old_name in folder_path_new:
                 if i == 0:
-                    cmap[255] = np.array([128, 64, 128])  # is equal to label 0
+                    cmap[255] = np.array([0, 0, 255])  # is equal to label 0
                 elif i == 1:
-                    cmap[255] = np.array([244, 35, 232])  # is label 1
+                    cmap[255] = np.array([0, 255, 0])  # is label 1
             folder_path_new = folder_path_new.replace(old_name, "labels")
         img_path_new = os.path.join(folder_path_new, filename)
         if not os.path.exists(os.path.dirname(img_path_new)):

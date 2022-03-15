@@ -4,6 +4,8 @@ import shutil
 import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
 
+base_path = r"/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer"
+
 if not os.path.exists("train/images"):
     os.makedirs("train/images")
     os.makedirs("train/labels")

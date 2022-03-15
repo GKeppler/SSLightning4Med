@@ -103,7 +103,7 @@ def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) 
             },
             "ground_truth": {
                 "mask_data": cv2.resize(
-                    np.squeeze(mask.numpy(), axis=0),
+                    np.squeeze(mask.cpu().numpy(), axis=0),
                     dsize=(100, 100),
                     interpolation=cv2.INTER_NEAREST,
                 ),
@@ -121,6 +121,24 @@ def sigmoid_rampup(current: int, rampup_length: int = 200) -> float:
         current = np.clip(current, 0.0, rampup_length)
         phase = 1.0 - current / rampup_length
         return float(np.exp(-5.0 * phase * phase))
+
+
+def get_color_map(dataset):
+    return {
+        "melanoma": [
+            [0, 0, 0],
+            [255, 255, 255],
+        ],
+        "breastCancer": [
+            [0, 0, 0],
+            [0, 0, 255],
+            [0, 255, 0],
+        ],
+        "pneumothorax": [
+            [0, 0, 0],
+            [255, 255, 255],
+        ],
+    }[dataset]
 
 
 def base_parse_args(LightningModule) -> Any:  # type: ignore
@@ -141,6 +159,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--crop-size", type=int, default=None)
     parser.add_argument("--base-size", type=int, default=None)
+    parser.add_argument("--n-class", type=int, default=None)
 
     parser.add_argument("--val-split", type=str, default="val_split_0")
 
@@ -179,22 +198,6 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 256}[args.dataset]
     if args.n_class is None:
         args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2}[args.dataset]
-    if args.color_map is None:
-        args.color_map = {
-            "melanoma": [
-                [0, 0, 0],
-                [255, 255, 255],
-            ],
-            "breastCancer": [
-                [0, 0, 0],
-                [128, 64, 128],
-                [244, 35, 232],
-            ],
-            "pneumothorax": [
-                [0, 0, 0],
-                [255, 255, 255],
-            ],
-        }[args.dataset]
     if args.split_file_path is None:
         args.split_file_path = (
             f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
@@ -202,9 +205,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.test_file_path is None:
         args.test_file_path = f"SSLightning4Med/data/splits/{args.dataset}/test.yaml"
     if args.pseudo_mask_path is None:
-        args.pseudo_mask_path = (
-            f"SSLightning4Med/data/pseudo_masks/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
-        )
+        args.pseudo_mask_path = f"data/pseudo_masks/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
     if args.save_path is None:
         args.save_path = f"models/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
     if args.reliable_id_path is None:

@@ -19,6 +19,7 @@ from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.unet import UNet_CCT
 from SSLightning4Med.utils import (
     base_parse_args,
+    get_color_map,
     mulitmetrics,
     sigmoid_rampup,
     wandb_image_mask,
@@ -85,6 +86,7 @@ class CCTModule(BaseModel):
         pred = self(img)[0]
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
+
         self.log("mIOU", val_acc)
 
     def test_step(self, batch, batch_idx):  # type: ignore
@@ -105,7 +107,7 @@ if __name__ == "__main__":
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join("./", f"{args.save_path}"),
-        filename=f"{args.model}" + "-{epoch:02d}-{val_acc:.2f}",
+        filename=f"{args.model}" + "-{epoch:02d}-{mIOU:.2f}",
         mode="max",
         save_weights_only=True,
     )
@@ -125,8 +127,8 @@ if __name__ == "__main__":
         log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
-        # gpus=[0],
-        accelerator="cpu",
+        gpus=[0],
+        # accelerator="cpu",
         # profiler="pytorch"
     )
 
@@ -142,7 +144,7 @@ if __name__ == "__main__":
             ToTensorV2(),
         ]
     )
-
+    color_map = get_color_map(args.dataset)
     dataModule = SemiDataModule(
         root_dir=args.data_root,
         batch_size=args.batch_size,
@@ -151,9 +153,8 @@ if __name__ == "__main__":
         pseudo_mask_path=args.pseudo_mask_path,
         train_transforms=a_train_transforms,
         mode="semi_train",
-        color_map=args.color_map,
+        color_map=color_map,
     )
-
     model = CCTModule(args)
     trainer.fit(model=model, datamodule=dataModule)
     trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
