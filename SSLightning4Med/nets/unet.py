@@ -60,6 +60,7 @@ class UpBlock(nn.Module):
         if self.bilinear:
             x1 = self.conv1x1(x1)
         x1 = self.up(x1)
+        print(x2.shape)
         x = torch.cat([x2, x1], dim=1)
         return self.conv(x)
 

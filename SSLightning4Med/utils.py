@@ -130,7 +130,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         "--dataset",
         type=str,
         choices=["melanoma", "pneumothorax", "breastCancer"],
-        default="melanoma",
+        default="breastCancer",
     )
     parser.add_argument(
         "--data-root",

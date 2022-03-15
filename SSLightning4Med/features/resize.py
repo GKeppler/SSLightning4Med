@@ -3,9 +3,9 @@ import os
 
 from PIL import Image
 
-path = "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017/"
-old_name = "ISIC_Demo_2017"
-new_name = "ISIC_Demo_2017_cropped"
+path = "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer"
+old_name = "BreastCancer"
+new_name = "BreastCancer_cropped"
 dirs = os.listdir(path)
 
 
