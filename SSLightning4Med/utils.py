@@ -113,6 +113,26 @@ def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) 
     )
 
 
+def get_color_map(dataset: str) -> ndarray:
+    """
+    BREASTCANCER_CLASSES = [
+        "normal",
+        "benign",
+        "malign",
+    ]
+    """
+    COLORMAP = {
+        "melanoma": None,
+        "breastCancer": [
+            [0, 0, 0],
+            [255, 0, 0],
+            [0, 255, 0],
+        ],
+        "pneumothorax": None,
+    }[dataset]
+    return COLORMAP
+
+
 def sigmoid_rampup(current: int, rampup_length: int = 200) -> float:
     """Exponential rampup from https://arxiv.org/abs/1610.02242"""
     if rampup_length == 0:
