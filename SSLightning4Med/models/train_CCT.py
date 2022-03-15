@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Tuple, Union
 import albumentations as A
 import pytorch_lightning as pl
 import torch
-import wandb
 from albumentations.pytorch import ToTensorV2
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -14,6 +13,7 @@ from torch import Tensor
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD
 
+import wandb
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.unet import UNet_CCT
@@ -99,7 +99,7 @@ class CCTModule(BaseModel):
         pred = self.model(img)[0]
         pred = torch.argmax(pred, dim=1).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
-        return {"Test Pictures": wandb_image_mask(img, mask, pred, self.args.n_class)}
+        return wandb_image_mask(img, mask, pred, self.args.n_class)
 
     def configure_optimizers(self) -> List:
         optimizer = SGD(self.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
@@ -117,11 +117,8 @@ if __name__ == "__main__":
         save_weights_only=True,
     )
     if args.use_wandb:
-        wandb.init(project="cct", entity="gkeppler")
+        wandb.init(project="SSLightning4Med", entity="gkeppler")
         wandb_logger = WandbLogger(project="SSLightning4Med")
-        wandb.define_metric("Pictures")
-        wandb.define_metric("loss")
-        wandb.define_metric("mIOU")
         wandb.config.update(args)
 
     dev_run = False  # not working when predicting with best_model checkpoint

@@ -29,7 +29,7 @@ class BaseModel(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
         parser.add_argument("--lr", type=float, default=0.001)
-        parser.add_argument("--model", type=str, choices=list(model_zoo.keys()), default="smallUnet")
+        parser.add_argument("--model", type=str, choices=list(model_zoo.keys()), default="unet")
         return parser
 
     def forward(self, x):  # type: ignore
@@ -50,15 +50,15 @@ class BaseModel(pl.LightningModule):
         pred = self.model(img)
         pred = torch.argmax(pred, dim=1).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
-        return {"Test Picture": wandb_image_mask(img, mask, pred, self.args.n_class)}
+        return wandb_image_mask(img, mask, pred, self.args.n_class)
 
     def test_epoch_end(self, outputs) -> None:  # type: ignore
         overall_acc, mIOU, mDICE = self.test_metrics.evaluate()
-        self.log("accuracy", overall_acc)
-        self.log("mIOU", mIOU)
-        self.log("mDICE", mDICE)
+        self.log("test overall_acc", overall_acc)
+        self.log("test mIOU", mIOU)
+        self.log("test mDICE", mDICE)
         # save first images
-        # self.log("Test Pictures", outputs["Test Picture"][:10])
+        self.logger.experiment.log({"Test Pictures": outputs[:10]})
         # reset metric
         self.test_metrics = mulitmetrics(num_classes=self.args.n_class)
 

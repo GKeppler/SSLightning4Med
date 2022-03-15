@@ -5,11 +5,12 @@ from typing import Any, Tuple
 import cv2
 import numpy as np
 import pytorch_lightning as pl
-import wandb
 from medpy import metric
 from numpy import ndarray
 from torch import Tensor
 from wandb.sdk.data_types import Image
+
+import wandb
 
 EPS = 1e-10
 
@@ -148,7 +149,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         "--dataset",
         type=str,
         choices=["melanoma", "pneumothorax", "breastCancer"],
-        default="breastCancer",
+        default="melanoma",
     )
     parser.add_argument(
         "--data-root",
@@ -156,7 +157,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         default=None,
     )
     parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--crop-size", type=int, default=None)
     parser.add_argument("--base-size", type=int, default=None)
     parser.add_argument("--n-class", type=int, default=None)
@@ -174,7 +175,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--pseudo-mask-path", type=str, default=None)
     parser.add_argument("--save-path", type=str, default=None)
     parser.add_argument("--reliable-id-path", type=str, default=None)
-    parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
+    parser.add_argument("--use-wandb", default=True, help="whether to use WandB for logging")
     # add model specific args
     parser = LightningModule.add_model_specific_args(parent_parser=parser)
     # add all the availabele trainer options to argparse
@@ -183,6 +184,9 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     args = parser.parse_args()
     if args.method is None:
         raise ValueError("no methodname in model_specific_args.")
+    if args.method == "CCT":
+        args.model = "unet_cct"
+
     if args.data_root is None:
         args.data_root = {
             "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",

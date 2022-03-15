@@ -9,7 +9,6 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-import wandb
 import yaml
 from albumentations.pytorch import ToTensorV2
 from pytorch_lightning import seed_everything
@@ -17,6 +16,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch import Tensor
 
+import wandb
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.utils import base_parse_args, get_color_map, meanIOU
@@ -235,9 +235,6 @@ if __name__ == "__main__":
     if args.use_wandb:
         wandb.init(project="SSLightning4Med", entity="gkeppler")
         wandb_logger = WandbLogger(project="SSLightning4Med")
-        wandb.define_metric("Pictures")
-        wandb.define_metric("loss")
-        wandb.define_metric("mIOU")
         wandb.config.update(args)
 
     dev_run = False  # not working when predicting with best_model checkpoint

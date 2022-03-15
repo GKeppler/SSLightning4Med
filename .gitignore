@@ -82,6 +82,7 @@ target/
 /data/
 models/*
 tb_logs/*
+wandb/*
 
 # Mac OS-specific storage files
 .DS_Store
