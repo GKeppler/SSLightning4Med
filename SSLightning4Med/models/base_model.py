@@ -53,10 +53,15 @@ class BaseModel(pl.LightningModule):
         return wandb_image_mask(img, mask, pred, self.args.n_class)
 
     def test_epoch_end(self, outputs) -> None:  # type: ignore
-        overall_acc, mIOU, mDICE = self.test_metrics.evaluate()
+        overall_acc, meanIOU, meanDSC, medpy_dc, medpy_jc, medpy_hd, medpy_asd = self.test_metrics.evaluate()
         self.log("test overall_acc", overall_acc)
-        self.log("test mIOU", mIOU)
-        self.log("test mDICE", mDICE)
+        self.log("test mIOU", meanIOU)
+        self.log("test mDICE", meanDSC)
+        self.log("test medpy_dc", medpy_dc)
+        self.log("test medpy_jc", medpy_jc)
+        self.log("test medpy_hd", medpy_hd)
+        self.log("test medpy_asd", medpy_asd)
+
         # save first images
         self.logger.experiment.log({"Test Pictures": outputs[:10]})
         # reset metric

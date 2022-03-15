@@ -42,6 +42,10 @@ class mulitmetrics:
     def __init__(self, num_classes: int) -> None:
         self.num_classes = num_classes
         self.hist = np.zeros((num_classes, num_classes))
+        self.medpy_dc_list = []
+        self.medpy_jc_list = []
+        self.medpy_hd_list = []
+        self.medpy_asd_list = []
 
     def _fast_hist(self, label_pred: ndarray, label_true: ndarray) -> ndarray:
         mask = (label_true >= 0) & (label_true < self.num_classes)
@@ -52,6 +56,11 @@ class mulitmetrics:
         return hist
 
     def add_batch(self, predictions: ndarray, gts: ndarray) -> None:
+        dc, jc, hd, asd = calculate_metric_percase(predictions, gts)
+        self.medpy_dc_list.append(dc)
+        self.medpy_jc_list.append(jc)
+        self.medpy_hd_list.append(hd)
+        self.medpy_asd_list.append(asd)
         for lp, lt in zip(predictions, gts):
             self.hist += self._fast_hist(lp.flatten(), lt.flatten())
 
@@ -72,7 +81,13 @@ class mulitmetrics:
         total = self.hist.sum()
         overall_acc = correct / (total + EPS)
 
-        return overall_acc, meanIOU, avg_dice
+        # medpy stuff
+        medpy_dc = np.mean(self.medpy_dc_list)
+        medpy_jc = np.mean(self.medpy_jc_list)
+        medpy_hd = np.mean(self.medpy_hd_list)
+        medpy_asd = np.mean(self.medpy_asd_list)
+
+        return overall_acc, meanIOU, avg_dice, medpy_dc, medpy_jc, medpy_hd, medpy_asd
 
 
 def calculate_metric_percase(pred: ndarray, gt: ndarray) -> Tuple[float, float, float, float]:
@@ -80,7 +95,6 @@ def calculate_metric_percase(pred: ndarray, gt: ndarray) -> Tuple[float, float, 
     jc = metric.binary.jc(pred, gt)
     hd = metric.binary.hd95(pred, gt)
     asd = metric.binary.asd(pred, gt)
-
     return dc, jc, hd, asd
 
 
@@ -157,7 +171,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         default=None,
     )
     parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=80)
+    parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--crop-size", type=int, default=None)
     parser.add_argument("--base-size", type=int, default=None)
     parser.add_argument("--n-class", type=int, default=None)
@@ -199,7 +213,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.crop_size is None:
         args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256}[args.dataset]
     if args.base_size is None:
-        args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 256}[args.dataset]
+        args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 512}[args.dataset]
     if args.n_class is None:
         args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2}[args.dataset]
     if args.split_file_path is None:
