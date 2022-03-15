@@ -19,7 +19,7 @@ from torch import Tensor
 
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils import base_parse_args, get_color_map, meanIOU
+from SSLightning4Med.utils import base_parse_args, meanIOU
 
 
 class STPlusPlusModel(BaseModel):
@@ -130,7 +130,8 @@ class STPlusPlusModel(BaseModel):
         if self.mode == "label":
             pred = self(img, tta=True)
             pred = torch.argmax(pred, dim=1).cpu()
-            pred = (pred * 255).squeeze(0).numpy().astype(np.uint8)
+            pred = pred.squeeze(0).numpy().astype(np.uint8)
+            pred = np.array(self.args.color_map)[pred]
             cv2.imwrite(
                 "%s/%s" % (self.args.pseudo_mask_path, os.path.basename(id[0].split(" ")[1])),
                 pred,
@@ -147,7 +148,7 @@ class STPlusPlusModel(BaseModel):
             reliability = sum(mIOU) / len(mIOU)
             self.id_to_reliability.append((id[0], reliability))
 
-    def on_predict_epoch_end(self) -> None:
+    def on_predict_epoch_end(self, results: List[Any]) -> None:
         if self.mode == "select_reliable":
             labeled_ids = []
             with open(self.args.split_file_path, "r") as file:
@@ -205,7 +206,6 @@ if __name__ == "__main__":
             ToTensorV2(),
         ]
     )
-    color_map = get_color_map(args.dataset)
     dataModule = SemiDataModule(
         root_dir=args.data_root,
         batch_size=args.batch_size,
@@ -217,7 +217,7 @@ if __name__ == "__main__":
         train_transforms=a_train_transforms_labeled,
         train_transforms_unlabeled=a_train_transforms_unlabeled,
         mode="train",
-        color_map=color_map,
+        color_map=args.color_map,
     )
 
     model = STPlusPlusModel(args)

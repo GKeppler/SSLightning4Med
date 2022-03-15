@@ -113,26 +113,6 @@ def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) 
     )
 
 
-def get_color_map(dataset: str) -> ndarray:
-    """
-    BREASTCANCER_CLASSES = [
-        "normal",
-        "benign",
-        "malign",
-    ]
-    """
-    COLORMAP = {
-        "melanoma": None,
-        "breastCancer": [
-            [0, 0, 0],
-            [255, 0, 0],
-            [0, 255, 0],
-        ],
-        "pneumothorax": None,
-    }[dataset]
-    return COLORMAP
-
-
 def sigmoid_rampup(current: int, rampup_length: int = 200) -> float:
     """Exponential rampup from https://arxiv.org/abs/1610.02242"""
     if rampup_length == 0:
@@ -199,6 +179,22 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 256}[args.dataset]
     if args.n_class is None:
         args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2}[args.dataset]
+    if args.color_map is None:
+        args.color_map = {
+            "melanoma": [
+                [0, 0, 0],
+                [255, 255, 255],
+            ],
+            "breastCancer": [
+                [0, 0, 0],
+                [128, 64, 128],
+                [244, 35, 232],
+            ],
+            "pneumothorax": [
+                [0, 0, 0],
+                [255, 255, 255],
+            ],
+        }[args.dataset]
     if args.split_file_path is None:
         args.split_file_path = (
             f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
