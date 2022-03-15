@@ -1,0 +1,5 @@
+- test/images/ISIC_0015950.jpg test/labels/ISIC_0015950_segmentation.png
+- test/images/ISIC_0015140.jpg test/labels/ISIC_0015140_segmentation.png
+- test/images/ISIC_0015559.jpg test/labels/ISIC_0015559_segmentation.png
+- test/images/ISIC_0014854.jpg test/labels/ISIC_0014854_segmentation.png
+- test/images/ISIC_0014574.jpg test/labels/ISIC_0014574_segmentation.png

@@ -17,8 +17,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch import Tensor
 
-from SSLightning4Med.data.data_module import SemiDataModule
 from SSLightning4Med.models.base_model import BaseModel
+from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.utils import base_parse_args, meanIOU
 
 

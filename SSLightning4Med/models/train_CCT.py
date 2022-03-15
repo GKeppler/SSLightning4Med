@@ -14,8 +14,8 @@ from torch import Tensor
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD
 
-from SSLightning4Med.data.data_module import SemiDataModule
 from SSLightning4Med.models.base_model import BaseModel
+from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.unet import UNet_CCT
 from SSLightning4Med.utils import (
     base_parse_args,
