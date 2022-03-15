@@ -187,7 +187,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.data_root is None:
         args.data_root = {
             "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
-            "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer",
+            "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
             "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
         }[args.dataset]
 
@@ -196,7 +196,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.crop_size is None:
         args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256}[args.dataset]
     if args.base_size is None:
-        args.base_size = {"melanoma": 256, "breastCancer": 500, "pneumothorax": 256}[args.dataset]
+        args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 256}[args.dataset]
     if args.n_class is None:
         args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2}[args.dataset]
     if args.split_file_path is None:
