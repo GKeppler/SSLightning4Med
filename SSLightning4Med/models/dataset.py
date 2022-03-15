@@ -46,10 +46,10 @@ class BaseDataset:
         mask = mask.astype(np.float32)
         if color_map is None:
             # binary
-            mask[mask == 255.0] = 1.0
-            # mask[(mask == 1.0) | (mask == 3.0)] = 1.0
-            return mask
-        else:
+            color_map = [
+                [0, 0, 0],
+                [255, 255, 255],
+            ]
             # multiclass problem
             # This function converts a mask from the Pascal VOC format to the format required by AutoAlbument.
             #
@@ -89,4 +89,7 @@ class BaseDataset:
         transformed = self.transform(image=image, mask=mask)
         image = transformed["image"]
         mask = transformed["mask"]
+        # the target should be a LongTensor with the shape [batch_size, height, width]
+        # and contain the class indices for each pixel location in the range [0, nb_classes-1]
+        mask = np.argmax(mask, axis=2)
         return image, mask, id
