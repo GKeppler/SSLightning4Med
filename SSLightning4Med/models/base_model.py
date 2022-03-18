@@ -3,7 +3,7 @@ from typing import List
 
 import pytorch_lightning as pl
 import torch
-from torch.nn import CrossEntropyLoss
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
 from torch.optim import SGD
 
 from SSLightning4Med.nets.unet import SmallUNet, UNet, UNet_CCT
@@ -16,7 +16,12 @@ class BaseModel(pl.LightningModule):
     def __init__(self, args) -> None:  # type: ignore
         super(BaseModel, self).__init__()
         self.model = model_zoo[args.model](in_chns=3, class_num=args.n_class)
-        self.criterion = CrossEntropyLoss()
+        # https://discuss.pytorch.org/t/how-to-use-bce-loss-and-crossentropyloss-correctly/89049
+        if args.n_class == 1:
+            self.criterion = BCEWithLogitsLoss()
+        else:
+            self.criterion = CrossEntropyLoss()
+
         self.previous_best = 0.0
         self.args = args
         self.set_metrics()
@@ -63,7 +68,8 @@ class BaseModel(pl.LightningModule):
         self.log("test medpy_asd", medpy_asd)
 
         # save first images
-        self.logger.experiment.log({"Test Pictures": outputs[:10]})
+        if self.args.use_wandb:
+            self.logger.experiment.log({"Test Pictures": outputs[:10]})
         # reset metric
         self.test_metrics = mulitmetrics(num_classes=self.args.n_class)
 

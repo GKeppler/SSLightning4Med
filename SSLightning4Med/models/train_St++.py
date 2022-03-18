@@ -86,8 +86,16 @@ class STPlusPlusModel(BaseModel):
             img = torch.cat((img, img_pseudo), 0)
             mask = torch.cat((mask, mask_pseudo), 0)
         pred = self(img)
-        loss = self.criterion(pred, mask.long())
-        return loss
+        if self.args.n_class == 1:
+            # BCEloss
+            mask = mask.float().squeeze()
+            pred = pred.squeeze()
+        else:
+            # CEloss
+            mask = mask.long()
+        loss = self.criterion(pred, mask)
+        self.log("train_loss", loss, sync_dist=True, on_epoch=True, on_step=True)
+        return {"loss": loss}
 
     def training_epoch_end(self, outputs: List[Dict[str, Tensor]]) -> None:
         if (self.current_epoch + 1) in [
@@ -245,9 +253,9 @@ if __name__ == "__main__":
         log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
-        gpus=[0],
-        # accelerator="cpu",
-        # profiler="pytorch"
+        # gpus=[0],
+        accelerator="cpu",
+        profiler="pytorch",
     )
     # <====================== Supervised training with labeled images (SupOnly) ======================>
 

@@ -20,7 +20,6 @@ from SSLightning4Med.nets.unet import UNet_CCT
 from SSLightning4Med.utils import (
     base_parse_args,
     get_color_map,
-    mulitmetrics,
     sigmoid_rampup,
     wandb_image_mask,
 )
@@ -41,10 +40,9 @@ class CCTModule(BaseModel):
 
     def __init__(self, args: Any):
         super(CCTModule, self).__init__(args)
-        self.ce_loss = CrossEntropyLoss()
         self.model = UNet_CCT(in_chns=3, class_num=args.n_class)
         self.consistency = 0.1
-        self.test_metrics = mulitmetrics(num_classes=args.n_class)
+        self.criterion = CrossEntropyLoss()
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         batch_unusupervised = batch["unlabeled"]
@@ -60,10 +58,10 @@ class CCTModule(BaseModel):
         outputs_aux3_soft = torch.softmax(outputs_aux3, dim=1)
         # calc losses for labeled batch
         label_batch = label_batch.long()
-        loss_ce = self.ce_loss(outputs, label_batch)
-        loss_ce_aux1 = self.ce_loss(outputs_aux1, label_batch)
-        loss_ce_aux2 = self.ce_loss(outputs_aux2, label_batch)
-        loss_ce_aux3 = self.ce_loss(outputs_aux3, label_batch)
+        loss_ce = self.criterion(outputs, label_batch)
+        loss_ce_aux1 = self.criterion(outputs_aux1, label_batch)
+        loss_ce_aux2 = self.criterion(outputs_aux2, label_batch)
+        loss_ce_aux3 = self.criterion(outputs_aux3, label_batch)
 
         supervised_loss = (loss_ce + loss_ce_aux1 + loss_ce_aux2 + loss_ce_aux3) / 4
 

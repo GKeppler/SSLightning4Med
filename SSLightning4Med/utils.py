@@ -93,8 +93,15 @@ class mulitmetrics:
 def calculate_metric_percase(pred: ndarray, gt: ndarray) -> Tuple[float, float, float, float]:
     dc = metric.binary.dc(pred, gt)
     jc = metric.binary.jc(pred, gt)
-    hd = metric.binary.hd95(pred, gt)
-    asd = metric.binary.asd(pred, gt)
+    if 1 in pred and 1 in gt:
+        hd = metric.binary.hd95(
+            pred,
+            gt,
+        )
+        asd = metric.binary.asd(pred, gt)
+    else:
+        hd = np.NaN
+        asd = np.NaN
     return dc, jc, hd, asd
 
 
@@ -189,7 +196,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--pseudo-mask-path", type=str, default=None)
     parser.add_argument("--save-path", type=str, default=None)
     parser.add_argument("--reliable-id-path", type=str, default=None)
-    parser.add_argument("--use-wandb", default=True, help="whether to use WandB for logging")
+    parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
     # add model specific args
     parser = LightningModule.add_model_specific_args(parent_parser=parser)
     # add all the availabele trainer options to argparse
@@ -215,7 +222,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.base_size is None:
         args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 512}[args.dataset]
     if args.n_class is None:
-        args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2}[args.dataset]
+        args.n_class = {"melanoma": 1, "breastCancer": 3, "pneumothorax": 1}[args.dataset]
     if args.split_file_path is None:
         args.split_file_path = (
             f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
