@@ -110,6 +110,7 @@ class STPlusPlusModel(BaseModel):
         pred = self(img)
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
+        raise Exception  # falscher miou
         # self.log("mIOU", val_acc)
         return {"mIOU": val_acc}
 
@@ -255,7 +256,7 @@ if __name__ == "__main__":
         callbacks=[checkpoint_callback],
         # gpus=[0],
         accelerator="cpu",
-        profiler="pytorch",
+        # profiler="pytorch",
     )
     # <====================== Supervised training with labeled images (SupOnly) ======================>
 

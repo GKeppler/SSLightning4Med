@@ -160,6 +160,7 @@ def get_color_map(dataset):
             [0, 0, 0],
             [255, 255, 255],
         ],
+        "multiorgan": [[s * 10, s * 10, s * 10] for s in range(0, 14)],
     }[dataset]
 
 
@@ -169,7 +170,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["melanoma", "pneumothorax", "breastCancer"],
+        choices=["melanoma", "pneumothorax", "breastCancer", "multiorgan"],
         default="melanoma",
     )
     parser.add_argument(
@@ -213,16 +214,17 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
             "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
             "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
+            "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
         }[args.dataset]
 
     if args.epochs is None:
         args.epochs = {"melanoma": 80}[args.dataset]
     if args.crop_size is None:
-        args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256}[args.dataset]
+        args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256, "multiorgan": 256}[args.dataset]
     if args.base_size is None:
-        args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 512}[args.dataset]
+        args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 512, "multiorgan": 512}[args.dataset]
     if args.n_class is None:
-        args.n_class = {"melanoma": 1, "breastCancer": 3, "pneumothorax": 1}[args.dataset]
+        args.n_class = {"melanoma": 1, "breastCancer": 3, "pneumothorax": 1, "multiorgan": 14}[args.dataset]
     if args.split_file_path is None:
         args.split_file_path = (
             f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
@@ -240,5 +242,4 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         os.makedirs(args.save_path)
     if not os.path.exists(args.pseudo_mask_path):
         os.makedirs(args.pseudo_mask_path)
-
     return args
