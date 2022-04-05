@@ -48,15 +48,17 @@ class mulitmetrics:
         self.medpy_asd_list = []
 
     def calculate_metric_percase(self, pred: ndarray, gt: ndarray) -> Tuple[float, float, float, float]:
-        dc = metric.binary.dc(pred, gt)
-        jc = metric.binary.jc(pred, gt)
         if 1 in pred and 1 in gt:
+            dc = metric.binary.dc(pred, gt)
+            jc = metric.binary.jc(pred, gt)
             hd = metric.binary.hd95(
                 pred,
                 gt,
             )
             asd = metric.binary.asd(pred, gt)
         else:
+            dc = np.NaN
+            jc = np.NaN
             hd = np.NaN
             asd = np.NaN
         return dc, jc, hd, asd
