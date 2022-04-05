@@ -72,11 +72,12 @@ class mulitmetrics:
         return hist
 
     def add_batch(self, predictions: ndarray, gts: ndarray) -> None:
-        dc, jc, hd, asd = self.calculate_metric_percase(predictions, gts)
-        self.medpy_dc_list.append(dc)
-        self.medpy_jc_list.append(jc)
-        self.medpy_hd_list.append(hd)
-        self.medpy_asd_list.append(asd)
+        for i in range(1, self.num_classes):
+            dc, jc, hd, asd = self.calculate_metric_percase((predictions == i).astype(int), (gts == i).astype(int))
+            self.medpy_dc_list.append(dc)
+            self.medpy_jc_list.append(jc)
+            self.medpy_hd_list.append(hd)
+            self.medpy_asd_list.append(asd)
         for lp, lt in zip(predictions, gts):
             self.hist += self._fast_hist(lp.flatten(), lt.flatten())
 
@@ -97,11 +98,11 @@ class mulitmetrics:
         total = self.hist.sum()
         overall_acc = correct / (total + EPS)
 
-        # medpy stuff
-        medpy_dc = np.mean(self.medpy_dc_list)
-        medpy_jc = np.mean(self.medpy_jc_list)
-        medpy_hd = np.mean(self.medpy_hd_list)
-        medpy_asd = np.mean(self.medpy_asd_list)
+        # medpy metrics
+        medpy_dc = np.nanmean(self.medpy_dc_list)
+        medpy_jc = np.nanmean(self.medpy_jc_list)
+        medpy_hd = np.nanmean(self.medpy_hd_list)
+        medpy_asd = np.nanmean(self.medpy_asd_list)
 
         return overall_acc, meanIOU, avg_dice, medpy_dc, medpy_jc, medpy_hd, medpy_asd
 
