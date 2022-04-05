@@ -110,13 +110,11 @@ class STPlusPlusModel(BaseModel):
         pred = self(img)
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
-        # raise Exception  # falscher miou
-        # self.log("mIOU", val_acc)
         return {"mIOU": val_acc}
 
     def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
         mIOU = outputs[-1]["mIOU"]
-        self.log("mIOU", mIOU)
+        self.log("val_mIoU", mIOU)
         if mIOU > self.previous_best:
             if self.previous_best != 0:
                 os.remove(
