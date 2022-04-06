@@ -19,7 +19,7 @@ from torch import Tensor
 import wandb
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils import base_parse_args, get_color_map, meanIOU
+from SSLightning4Med.utils.utils import base_parse_args, get_color_map, meanIOU
 
 
 class STPlusPlusModel(BaseModel):

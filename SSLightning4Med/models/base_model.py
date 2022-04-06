@@ -7,7 +7,7 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
 from torch.optim import SGD
 
 from SSLightning4Med.nets.unet import SmallUNet, UNet, UNet_CCT
-from SSLightning4Med.utils import meanIOU, mulitmetrics, wandb_image_mask
+from SSLightning4Med.utils.utils import meanIOU, mulitmetrics, wandb_image_mask
 
 model_zoo = {"unet": UNet, "smallUnet": SmallUNet, "unet_cct": UNet_CCT}
 

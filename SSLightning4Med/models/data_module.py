@@ -89,14 +89,22 @@ class SemiDataModule(pl.LightningDataModule):
         )
 
     def train_dataloader(self):  # type: ignore
-        loader_labeled = DataLoader(self.labeled_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
+        loader_labeled = DataLoader(
+            self.labeled_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
         if self.mode == "train":
             return {"labeled": loader_labeled}
         elif self.mode == "pseudo_train":
             combined_loaders = CombinedLoader(
                 {
                     "pseudolabeled": DataLoader(
-                        self.pseudolabeled_dataset, batch_size=self.unlabeled_batch_size, num_workers=self.num_workers
+                        self.pseudolabeled_dataset,
+                        batch_size=self.unlabeled_batch_size,
+                        num_workers=self.num_workers,
+                        pin_memory=True,
                     ),
                     "labeled": loader_labeled,
                 },
@@ -108,6 +116,7 @@ class SemiDataModule(pl.LightningDataModule):
                 self.unlabeled_dataset,
                 batch_size=self.unlabeled_batch_size,
                 num_workers=self.num_workers,
+                pin_memory=True,
             )
             return {"unlabeled": loader_unlabeled, "labeled": loader_labeled}
         else:
@@ -118,6 +127,7 @@ class SemiDataModule(pl.LightningDataModule):
             self.val_dataset,
             batch_size=1,
             num_workers=self.num_workers,
+            pin_memory=True,
         )
 
     def test_dataloader(self) -> DataLoader:
@@ -125,6 +135,7 @@ class SemiDataModule(pl.LightningDataModule):
             self.test_dataset,
             batch_size=1,
             num_workers=self.num_workers,
+            pin_memory=True,
         )
 
     def predict_dataloader(self) -> DataLoader:
@@ -132,4 +143,5 @@ class SemiDataModule(pl.LightningDataModule):
             self.predict_dataset,
             batch_size=1,
             num_workers=self.num_workers,
+            pin_memory=True,
         )

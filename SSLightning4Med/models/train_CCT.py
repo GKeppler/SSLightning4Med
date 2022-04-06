@@ -17,7 +17,7 @@ import wandb
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.unet import UNet_CCT
-from SSLightning4Med.utils import (
+from SSLightning4Med.utils.utils import (
     base_parse_args,
     get_color_map,
     sigmoid_rampup,
