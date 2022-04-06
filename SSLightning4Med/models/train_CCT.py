@@ -2,10 +2,8 @@ import os
 from argparse import ArgumentParser
 from typing import Any, Dict, List, Tuple, Union
 
-import albumentations as A
 import pytorch_lightning as pl
 import torch
-from albumentations.pytorch import ToTensorV2
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
@@ -17,6 +15,7 @@ import wandb
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.unet import UNet_CCT
+from SSLightning4Med.utils.augmentations import Augmentations
 from SSLightning4Med.utils.utils import (
     base_parse_args,
     get_color_map,
@@ -132,18 +131,7 @@ if __name__ == "__main__":
         # profiler="pytorch"
     )
 
-    # Declare an augmentation pipelines
-    a_train_transforms = A.Compose(
-        [
-            A.LongestMaxSize(args.base_size),
-            A.RandomScale(scale_limit=(0.5, 2), p=1),
-            A.PadIfNeeded(args.crop_size, args.crop_size),
-            A.RandomCrop(args.crop_size, args.crop_size),
-            A.HorizontalFlip(p=0.5),
-            A.Normalize(),
-            ToTensorV2(),
-        ]
-    )
+    augs = Augmentations(args)
     color_map = get_color_map(args.dataset)
     dataModule = SemiDataModule(
         root_dir=args.data_root,
@@ -151,7 +139,9 @@ if __name__ == "__main__":
         split_yaml_path=args.split_file_path,
         test_yaml_path=args.test_file_path,
         pseudo_mask_path=args.pseudo_mask_path,
-        train_transforms=a_train_transforms,
+        train_transforms=augs.a_train_transforms_labeled(),
+        val_transforms=augs.a_val_transforms(),
+        test_transforms=augs.a_val_transforms(),
         mode="semi_train",
         color_map=color_map,
     )

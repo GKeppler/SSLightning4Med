@@ -3,14 +3,12 @@ from argparse import ArgumentParser
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import albumentations as A
 import cv2
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 import yaml
-from albumentations.pytorch import ToTensorV2
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
@@ -19,6 +17,7 @@ from torch import Tensor
 import wandb
 from SSLightning4Med.models.base_model import BaseModel
 from SSLightning4Med.models.data_module import SemiDataModule
+from SSLightning4Med.utils.augmentations import Augmentations
 from SSLightning4Med.utils.utils import base_parse_args, get_color_map, meanIOU
 
 
@@ -86,6 +85,7 @@ class STPlusPlusModel(BaseModel):
             img = torch.cat((img, img_pseudo), 0)
             mask = torch.cat((mask, mask_pseudo), 0)
         pred = self(img)
+        # n = 1 is a problem for metrics. n = 2 for the unet output
         if self.args.n_class == 1:
             # BCEloss
             mask = mask.float().squeeze()
@@ -180,41 +180,9 @@ class STPlusPlusModel(BaseModel):
 
 
 if __name__ == "__main__":
-
     args = base_parse_args(STPlusPlusModel)
-
     seed_everything(123, workers=True)
-
-    # Declare an augmentation pipelines
-    a_train_transforms_labeled = A.Compose(
-        [
-            A.LongestMaxSize(args.base_size),
-            A.RandomScale(scale_limit=(0.5, 2), p=1),
-            A.RandomCrop(args.crop_size, args.crop_size),
-            A.HorizontalFlip(p=0.5),
-            A.Normalize(),
-            ToTensorV2(),
-        ]
-    )
-
-    a_val_transforms = A.Compose([A.LongestMaxSize(args.base_size), A.Normalize(), ToTensorV2()])
-
-    a_train_transforms_unlabeled = A.Compose(
-        [
-            A.LongestMaxSize(args.base_size),
-            A.RandomScale(scale_limit=(0.5, 2), p=1),
-            A.RandomCrop(args.crop_size, args.crop_size),
-            A.HorizontalFlip(p=0.5),
-            A.GaussianBlur(p=0.5),
-            A.ColorJitter(p=0.8),
-            A.CoarseDropout(),  # cutout
-            A.Normalize(  # imagenet normalize
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225],
-            ),
-            ToTensorV2(),
-        ]
-    )
+    augs = Augmentations(args)
     color_map = get_color_map(args.dataset)
     dataModule = SemiDataModule(
         root_dir=args.data_root,
@@ -222,10 +190,10 @@ if __name__ == "__main__":
         split_yaml_path=args.split_file_path,
         test_yaml_path=args.test_file_path,
         pseudo_mask_path=args.pseudo_mask_path,
-        test_transforms=a_val_transforms,
-        val_transforms=a_val_transforms,
-        train_transforms=a_train_transforms_labeled,
-        train_transforms_unlabeled=a_train_transforms_unlabeled,
+        test_transforms=augs.a_val_transforms(),
+        val_transforms=augs.a_val_transforms(),
+        train_transforms=augs.a_train_transforms_labeled(),
+        train_transforms_unlabeled=augs.a_train_transforms_unlabeled(),
         mode="train",
         color_map=color_map,
     )

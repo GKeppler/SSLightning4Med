@@ -19,11 +19,11 @@ class ConvBlock(nn.Module):
         self.conv_conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Dropout(dropout_p),
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(),
+            nn.ReLU(),
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -157,11 +157,10 @@ class UNet(nn.Module):
 
         params = {
             "in_chns": in_chns,
-            "feature_chns": [16, 32, 64, 128, 256],
+            "feature_chns": [64, 128, 256, 512, 1024],
             "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
             "class_num": class_num,
             "bilinear": False,
-            "acti_func": "relu",
         }
 
         self.encoder = Encoder(params)
@@ -183,7 +182,6 @@ class SmallUNet(nn.Module):
             "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
             "class_num": class_num,
             "bilinear": False,
-            "acti_func": "relu",
         }
 
         self.encoder = Encoder(params)
@@ -201,11 +199,10 @@ class UNet_CCT(nn.Module):
 
         params = {
             "in_chns": in_chns,
-            "feature_chns": [16, 32, 64, 128, 256],
+            "feature_chns": [64, 128, 256, 512, 1024],
             "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
             "class_num": class_num,
             "bilinear": False,
-            "acti_func": "relu",
         }
         self.encoder = Encoder(params)
         self.main_decoder = Decoder(params)

@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from typing import List
+from typing import Dict, List, Union
 
 import pytorch_lightning as pl
 import torch
@@ -17,7 +17,7 @@ class BaseModel(pl.LightningModule):
         super(BaseModel, self).__init__()
         self.model = model_zoo[args.model](in_chns=3, class_num=args.n_class)
         # https://discuss.pytorch.org/t/how-to-use-bce-loss-and-crossentropyloss-correctly/89049
-        if args.n_class == 1:
+        if args.n_class == 2:
             self.criterion = BCEWithLogitsLoss()
         else:
             self.criterion = CrossEntropyLoss()
@@ -48,7 +48,12 @@ class BaseModel(pl.LightningModule):
         pred = self(img)
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
-        self.log("mIOU", val_acc)
+        return {"mIOU": val_acc}
+
+    def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
+        mIOU = outputs[-1]["mIOU"]
+        self.log("val_mIoU", mIOU)
+        self.set_metrics()
 
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
