@@ -136,7 +136,7 @@ if __name__ == "__main__":
     a_train_transforms = A.Compose(
         [
             A.LongestMaxSize(args.base_size),
-            A.RandomScale(scale_limit=[0, 5, 2], p=1),
+            A.RandomScale(scale_limit=(0.5, 2), p=1),
             A.PadIfNeeded(args.crop_size, args.crop_size),
             A.RandomCrop(args.crop_size, args.crop_size),
             A.HorizontalFlip(p=0.5),

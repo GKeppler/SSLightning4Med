@@ -110,13 +110,11 @@ class STPlusPlusModel(BaseModel):
         pred = self(img)
         self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
         val_acc = self.metric.evaluate()[-1]
-        raise Exception  # falscher miou
-        # self.log("mIOU", val_acc)
         return {"mIOU": val_acc}
 
     def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
         mIOU = outputs[-1]["mIOU"]
-        self.log("mIOU", mIOU)
+        self.log("val_mIoU", mIOU)
         if mIOU > self.previous_best:
             if self.previous_best != 0:
                 os.remove(
@@ -191,7 +189,7 @@ if __name__ == "__main__":
     a_train_transforms_labeled = A.Compose(
         [
             A.LongestMaxSize(args.base_size),
-            A.RandomScale(scale_limit=[0, 5, 2], p=1),
+            A.RandomScale(scale_limit=(0.5, 2), p=1),
             A.RandomCrop(args.crop_size, args.crop_size),
             A.HorizontalFlip(p=0.5),
             A.Normalize(),
@@ -204,7 +202,7 @@ if __name__ == "__main__":
     a_train_transforms_unlabeled = A.Compose(
         [
             A.LongestMaxSize(args.base_size),
-            A.RandomScale(scale_limit=[0, 5, 2], p=1),
+            A.RandomScale(scale_limit=(0.5, 2), p=1),
             A.RandomCrop(args.crop_size, args.crop_size),
             A.HorizontalFlip(p=0.5),
             A.GaussianBlur(p=0.5),
@@ -254,8 +252,8 @@ if __name__ == "__main__":
         log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
-        # gpus=[0],
-        accelerator="cpu",
+        gpus=[0],
+        # accelerator="cpu",
         # profiler="pytorch",
     )
     # <====================== Supervised training with labeled images (SupOnly) ======================>

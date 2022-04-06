@@ -47,6 +47,22 @@ class mulitmetrics:
         self.medpy_hd_list = []
         self.medpy_asd_list = []
 
+    def calculate_metric_percase(self, pred: ndarray, gt: ndarray) -> Tuple[float, float, float, float]:
+        if 1 in pred and 1 in gt:
+            dc = metric.binary.dc(pred, gt)
+            jc = metric.binary.jc(pred, gt)
+            hd = metric.binary.hd95(
+                pred,
+                gt,
+            )
+            asd = metric.binary.asd(pred, gt)
+        else:
+            dc = np.NaN
+            jc = np.NaN
+            hd = np.NaN
+            asd = np.NaN
+        return dc, jc, hd, asd
+
     def _fast_hist(self, label_pred: ndarray, label_true: ndarray) -> ndarray:
         mask = (label_true >= 0) & (label_true < self.num_classes)
         hist = np.bincount(
@@ -56,11 +72,12 @@ class mulitmetrics:
         return hist
 
     def add_batch(self, predictions: ndarray, gts: ndarray) -> None:
-        dc, jc, hd, asd = calculate_metric_percase(predictions, gts)
-        self.medpy_dc_list.append(dc)
-        self.medpy_jc_list.append(jc)
-        self.medpy_hd_list.append(hd)
-        self.medpy_asd_list.append(asd)
+        for i in range(1, self.num_classes):
+            dc, jc, hd, asd = self.calculate_metric_percase((predictions == i).astype(int), (gts == i).astype(int))
+            self.medpy_dc_list.append(dc)
+            self.medpy_jc_list.append(jc)
+            self.medpy_hd_list.append(hd)
+            self.medpy_asd_list.append(asd)
         for lp, lt in zip(predictions, gts):
             self.hist += self._fast_hist(lp.flatten(), lt.flatten())
 
@@ -81,28 +98,13 @@ class mulitmetrics:
         total = self.hist.sum()
         overall_acc = correct / (total + EPS)
 
-        # medpy stuff
-        medpy_dc = np.mean(self.medpy_dc_list)
-        medpy_jc = np.mean(self.medpy_jc_list)
-        medpy_hd = np.mean(self.medpy_hd_list)
-        medpy_asd = np.mean(self.medpy_asd_list)
+        # medpy metrics
+        medpy_dc = np.nanmean(self.medpy_dc_list)
+        medpy_jc = np.nanmean(self.medpy_jc_list)
+        medpy_hd = np.nanmean(self.medpy_hd_list)
+        medpy_asd = np.nanmean(self.medpy_asd_list)
 
         return overall_acc, meanIOU, avg_dice, medpy_dc, medpy_jc, medpy_hd, medpy_asd
-
-
-def calculate_metric_percase(pred: ndarray, gt: ndarray) -> Tuple[float, float, float, float]:
-    dc = metric.binary.dc(pred, gt)
-    jc = metric.binary.jc(pred, gt)
-    if 1 in pred and 1 in gt:
-        hd = metric.binary.hd95(
-            pred,
-            gt,
-        )
-        asd = metric.binary.asd(pred, gt)
-    else:
-        hd = np.NaN
-        asd = np.NaN
-    return dc, jc, hd, asd
 
 
 def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) -> Image:
@@ -171,7 +173,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         "--dataset",
         type=str,
         choices=["melanoma", "pneumothorax", "breastCancer", "multiorgan"],
-        default="melanoma",
+        default="multiorgan",
     )
     parser.add_argument(
         "--data-root",
@@ -224,7 +226,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.base_size is None:
         args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 512, "multiorgan": 512}[args.dataset]
     if args.n_class is None:
-        args.n_class = {"melanoma": 1, "breastCancer": 3, "pneumothorax": 1, "multiorgan": 14}[args.dataset]
+        args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2, "multiorgan": 14}[args.dataset]
     if args.split_file_path is None:
         args.split_file_path = (
             f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"

@@ -100,16 +100,18 @@ def slice_images(raw_path: str, save_path_slices: str) -> None:
             print(item)
             for slice_ind in range(image.shape[0]):
                 print(image[slice_ind].shape)
-                cv2.imwrite(
-                    os.path.join(save_path_slices, "images", "{}_slice_{}.png").format(item, slice_ind),
-                    image[slice_ind] * 255,
-                )
-                print(np.unique(mask[slice_ind]))
-                cv2.imwrite(
-                    os.path.join(save_path_slices, "labels", "{}_slice_{}_mask.png").format(item, slice_ind),
-                    mask[slice_ind] * 10,
-                )
-                slice_num += 1
+                # skip slices with only zeros in them
+                all_zeros = not mask[slice_ind].any()
+                if all_zeros is False:
+                    cv2.imwrite(
+                        os.path.join(save_path_slices, "images", "{}_slice_{}.png").format(item, slice_ind),
+                        image[slice_ind] * 255,
+                    )
+                    cv2.imwrite(
+                        os.path.join(save_path_slices, "labels", "{}_slice_{}_mask.png").format(item, slice_ind),
+                        mask[slice_ind] * 10,
+                    )
+                    slice_num += 1
     print("Converted all volumes to 2D slices")
     print("Total {} slices".format(slice_num))
 
@@ -174,14 +176,14 @@ def split(base_path: str):
                 zw[1] = "_"
             split = "".join(zw)
 
-            yaml_path = rf"splits/{dataset}/{split}/split_{shuffle}"
+            yaml_path = rf"./splits/{dataset}/{split}/split_{shuffle}"
             Path(yaml_path).mkdir(parents=True, exist_ok=True)
             with open(yaml_path + "/split.yaml", "w+") as outfile:
                 yaml.dump(yaml_dict, outfile, default_flow_style=False)
 
     # test yaml file
     yaml_dict = {}
-    yaml_path = rf"splits/{dataset}/"
+    yaml_path = rf"./splits/{dataset}/"
     Path(yaml_path).mkdir(parents=True, exist_ok=True)
 
     with open(yaml_path + "/test.yaml", "w+") as outfile:
@@ -189,7 +191,9 @@ def split(base_path: str):
 
 
 @click.command()
-@click.argument("base_path", type=click.Path())  # "/home/gustav/datasets/multiorgan/"
+@click.argument(
+    "base_path", type=click.Path(), default="/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan"
+)  # "/home/gustav/datasets/multiorgan/"
 def main(base_path: str):
     project_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
     dotenv_path = os.path.join(project_dir, ".env")

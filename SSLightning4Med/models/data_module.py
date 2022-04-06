@@ -73,7 +73,7 @@ class SemiDataModule(pl.LightningDataModule):
         self.predict_dataset = BaseDataset(
             root_dir=self.root_dir,
             id_list=val_split_0["unlabeled"],
-            transform=self.train_transforms,
+            transform=None,
             color_map=self.color_map,
         )
 
