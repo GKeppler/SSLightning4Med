@@ -30,7 +30,7 @@ class STPlusPlusModel(BaseModel):
         parser.add_argument(
             "--plus",
             dest="plus",
-            default=False,
+            default=True,
             help="whether to use ST++",
         )
         parser.add_argument("--use-tta", default=True, help="whether to use Test Time Augmentation")
