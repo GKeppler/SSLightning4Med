@@ -35,7 +35,7 @@ class STPlusPlusModel(BaseModel):
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         img, mask, _ = batch["labeled"]
         pred = self(img)
-        if self.args.n_class == 1:
+        if self.args.n_class == 2:
             # BCEloss
             mask = mask.float().squeeze()
             pred = pred.squeeze()

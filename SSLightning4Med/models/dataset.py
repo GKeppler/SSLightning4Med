@@ -1,11 +1,9 @@
 import os
 from typing import List, Optional, Tuple
 
-import albumentations as A
 import cv2
 import numpy as np
 from albumentations.core.composition import Compose
-from albumentations.pytorch import ToTensorV2
 from numpy import ndarray
 from torch import Tensor
 
@@ -21,24 +19,13 @@ class BaseDataset:
         root_dir: str,
         id_list: List[str],
         color_map: ndarray,
+        transform: Compose,
         pseudo_mask_path: Optional[str] = None,
-        transform: Optional[Compose] = None,
     ) -> None:
         self.root_dir = root_dir
         self.id_list = id_list
         self.pseudo_mask_path = pseudo_mask_path
-        if transform is None:
-            self.transform = A.Compose(
-                [
-                    A.Normalize(
-                        mean=[0.485, 0.456, 0.406],
-                        std=[0.229, 0.224, 0.225],
-                    ),
-                    ToTensorV2(),
-                ]
-            )
-        else:
-            self.transform = transform
+        self.transform = transform
         self.color_map = color_map
 
     @staticmethod

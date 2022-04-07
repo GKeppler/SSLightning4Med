@@ -86,7 +86,7 @@ class STPlusPlusModel(BaseModel):
             mask = torch.cat((mask, mask_pseudo), 0)
         pred = self(img)
         # n = 1 is a problem for metrics. n = 2 for the unet output
-        if self.args.n_class == 1:
+        if self.args.n_class == 2:
             # BCEloss
             mask = mask.float().squeeze()
             pred = pred.squeeze()
@@ -108,13 +108,11 @@ class STPlusPlusModel(BaseModel):
     def validation_step(self, batch: Tuple[Tensor, Tensor, str], batch_idx: int) -> Dict[str, float]:
         img, mask, id = batch
         pred = self(img)
-        self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
-        val_acc = self.metric.evaluate()[-1]
-        return {"mIOU": val_acc}
+        self.val_IoU(pred, mask)
+        self.log("val_mIoU", self.val_IoU, on_step=True, on_epoch=True)
 
     def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
-        mIOU = outputs[-1]["mIOU"]
-        self.log("val_mIoU", mIOU)
+        mIOU = self.val_IoU.compute()
         if mIOU > self.previous_best:
             if self.previous_best != 0:
                 os.remove(
@@ -190,20 +188,21 @@ if __name__ == "__main__":
         split_yaml_path=args.split_file_path,
         test_yaml_path=args.test_file_path,
         pseudo_mask_path=args.pseudo_mask_path,
-        test_transforms=augs.a_val_transforms(),
-        val_transforms=augs.a_val_transforms(),
-        train_transforms=augs.a_train_transforms_labeled(),
-        train_transforms_unlabeled=augs.a_train_transforms_unlabeled(),
         mode="train",
         color_map=color_map,
+        num_workers=args.n_workers,
     )
+
+    dataModule.val_transforms = augs.a_val_transforms()
+    dataModule.train_transforms = augs.a_train_transforms_labeled()
+    dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
 
     model = STPlusPlusModel(args)
 
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join("./", f"{args.save_path}"),
-        filename=f"{args.model}" + "-{epoch:02d}-{mIOU:.2f}",
+        filename=f"{args.model}" + "-{epoch:02d}-{val_mIoU:.2f}",
         mode="max",
         save_weights_only=True,
     )
@@ -221,6 +220,7 @@ if __name__ == "__main__":
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
         gpus=[0],
+        precision=16,
         # accelerator="cpu",
         # profiler="pytorch",
     )
@@ -250,7 +250,6 @@ if __name__ == "__main__":
         trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
         # <================================ Pseudo label reliable images =================================>
         dataModule.split_yaml_path = os.path.join(args.reliable_id_path, "reliable_ids.yaml")
-        dataModule.init_datasets()
         model.mode = "label"
         trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
         # <================================== The 1st stage re-training ==================================>
@@ -258,13 +257,12 @@ if __name__ == "__main__":
         model = STPlusPlusModel(args)
 
         # increase max epochs to double the amount
-        trainer.fit_loop.max_epochs = args.epochs * 3
+        trainer.fit_loop.max_epochs = args.epochs * 2
         dataModule.mode = "pseudo_train"
         trainer.fit(model=model, datamodule=dataModule)
         # <=============================== Pseudo label all images ================================>
 
         dataModule.split_yaml_path = args.split_file_path
-        dataModule.init_datasets()
         model.mode = "label"
         trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
@@ -272,7 +270,7 @@ if __name__ == "__main__":
         model = STPlusPlusModel(args)
 
         # increase max epochs to double the amount
-        trainer.fit_loop.max_epochs = args.epochs * 4
+        trainer.fit_loop.max_epochs = args.epochs * 3
         trainer.fit(model=model, datamodule=dataModule)
 
     # <====================== Test supervised model on testset (Semi) ======================>

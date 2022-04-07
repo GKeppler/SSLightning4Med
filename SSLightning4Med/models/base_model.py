@@ -1,11 +1,13 @@
 from argparse import ArgumentParser
-from typing import Dict, List, Union
+from typing import List
 
 import pytorch_lightning as pl
 import torch
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
 from torch.optim import SGD
+from torchmetrics import IoU
 
+# from SSLightning4Med.nets.small_unet import SmallUnet2
 from SSLightning4Med.nets.unet import SmallUNet, UNet, UNet_CCT
 from SSLightning4Med.utils.utils import meanIOU, mulitmetrics, wandb_image_mask
 
@@ -15,7 +17,7 @@ model_zoo = {"unet": UNet, "smallUnet": SmallUNet, "unet_cct": UNet_CCT}
 class BaseModel(pl.LightningModule):
     def __init__(self, args) -> None:  # type: ignore
         super(BaseModel, self).__init__()
-        self.model = model_zoo[args.model](in_chns=3, class_num=args.n_class)
+        self.model = model_zoo[args.model](in_chns=3, class_num=args.n_class if args.n_class > 2 else 1)
         # https://discuss.pytorch.org/t/how-to-use-bce-loss-and-crossentropyloss-correctly/89049
         if args.n_class == 2:
             self.criterion = BCEWithLogitsLoss()
@@ -24,6 +26,10 @@ class BaseModel(pl.LightningModule):
 
         self.previous_best = 0.0
         self.args = args
+        self.val_IoU = IoU(
+            # ignore_index=0,
+            num_classes=self.args.n_class,
+        )
         self.set_metrics()
 
     def set_metrics(self):
@@ -46,14 +52,8 @@ class BaseModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
         pred = self(img)
-        self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
-        val_acc = self.metric.evaluate()[-1]
-        return {"mIOU": val_acc}
-
-    def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
-        mIOU = outputs[-1]["mIOU"]
-        self.log("val_mIoU", mIOU)
-        self.set_metrics()
+        self.val_IoU(torch.argmax(pred, dim=1), mask)
+        self.log("val_mIoU", self.val_IoU, on_step=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch

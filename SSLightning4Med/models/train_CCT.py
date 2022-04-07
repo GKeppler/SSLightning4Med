@@ -1,6 +1,6 @@
 import os
 from argparse import ArgumentParser
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple
 
 import pytorch_lightning as pl
 import torch
@@ -39,7 +39,7 @@ class CCTModule(BaseModel):
 
     def __init__(self, args: Any):
         super(CCTModule, self).__init__(args)
-        self.model = UNet_CCT(in_chns=3, class_num=args.n_class)
+        self.model = UNet_CCT(in_chns=3, class_num=args.n_class if args.n_class > 2 else 1)
         self.consistency = 0.1
         self.criterion = CrossEntropyLoss()
 
@@ -81,15 +81,8 @@ class CCTModule(BaseModel):
     def validation_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
         pred = self(img)[0]
-        self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
-        val_acc = self.metric.evaluate()[-1]
-        return {"mIOU": val_acc}
-
-    def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
-        mIOU = outputs[-1]["mIOU"]
-        self.log("mIOU", mIOU)
-        # reset metrics
-        self.set_metrics()
+        self.val_IoU(pred, mask)
+        self.log("val_mIoU", self.val_IoU, on_step=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
@@ -109,7 +102,7 @@ if __name__ == "__main__":
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join("./", f"{args.save_path}"),
-        filename=f"{args.model}" + "-{epoch:02d}-{mIOU:.2f}",
+        filename=f"{args.model}" + "-{epoch:02d}-{val_mIoU:.2f}",
         mode="max",
         save_weights_only=True,
     )
@@ -127,6 +120,7 @@ if __name__ == "__main__":
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
         gpus=[0],
+        precision=16,
         # accelerator="cpu",
         # profiler="pytorch"
     )
@@ -139,12 +133,14 @@ if __name__ == "__main__":
         split_yaml_path=args.split_file_path,
         test_yaml_path=args.test_file_path,
         pseudo_mask_path=args.pseudo_mask_path,
-        train_transforms=augs.a_train_transforms_labeled(),
-        val_transforms=augs.a_val_transforms(),
-        test_transforms=augs.a_val_transforms(),
         mode="semi_train",
         color_map=color_map,
     )
+
+    dataModule.val_transforms = augs.a_val_transforms()
+    dataModule.train_transforms = augs.a_train_transforms_labeled()
+    dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
+
     model = CCTModule(args)
     trainer.fit(model=model, datamodule=dataModule)
     trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
