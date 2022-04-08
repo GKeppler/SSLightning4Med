@@ -1,30 +1,20 @@
-import os
 from argparse import ArgumentParser
 from typing import Any, Dict, List, Tuple
 
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch import Tensor
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD
 
-import wandb
-from SSLightning4Med.models.base_model import BaseModel
+from SSLightning4Med.models.base_model import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.unet import UNet_CCT
-from SSLightning4Med.utils.augmentations import Augmentations
-from SSLightning4Med.utils.utils import (
-    base_parse_args,
-    get_color_map,
-    sigmoid_rampup,
-    wandb_image_mask,
-)
+from SSLightning4Med.utils.utils import sigmoid_rampup, wandb_image_mask
 
 
-class CCTModule(BaseModel):
+class CCTModule(BaseModule):
     """
     this is the implementation of the CCT SSL approach
     - custom unet with aux decoders 1-3
@@ -39,7 +29,7 @@ class CCTModule(BaseModel):
 
     def __init__(self, args: Any):
         super(CCTModule, self).__init__(args)
-        self.model = UNet_CCT(in_chns=3, class_num=args.n_class if args.n_class > 2 else 1)
+        self.net = UNet_CCT(in_chns=3, class_num=args.n_class if args.n_class > 2 else 1)
         self.consistency = 0.1
         self.criterion = CrossEntropyLoss()
 
@@ -50,7 +40,7 @@ class CCTModule(BaseModel):
         # calculate all outputs based on the different decoders
         image_batch, label_batch, _ = batch_supervised
 
-        outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.model(image_batch)
+        outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.net(image_batch)
         outputs_soft = torch.softmax(outputs, dim=1)
         outputs_aux1_soft = torch.softmax(outputs_aux1, dim=1)
         outputs_aux2_soft = torch.softmax(outputs_aux2, dim=1)
@@ -66,7 +56,7 @@ class CCTModule(BaseModel):
 
         # calucalate unsupervised loss
         image_batch, _, _ = batch_unusupervised
-        outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.model(image_batch)
+        outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.net(image_batch)
         # warmup unsup loss to avoid inital noise
         consistency_weight = self.consistency * sigmoid_rampup(self.current_epoch)
 
@@ -82,11 +72,12 @@ class CCTModule(BaseModel):
         img, mask, id = batch
         pred = self(img)[0]
         self.val_IoU(pred, mask)
-        self.log("val_mIoU", self.val_IoU, on_step=True, on_epoch=True)
+        self.log("val_loss", self.val_loss)
+        self.log("val_mIoU", self.val_IoU, on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
-        pred = self.model(img)[0]
+        pred = self.net(img)[0]
         pred = torch.argmax(pred, dim=1).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
         return wandb_image_mask(img, mask, pred, self.args.n_class)
@@ -95,52 +86,57 @@ class CCTModule(BaseModel):
         optimizer = SGD(self.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
         return [optimizer]
 
+    @staticmethod
+    def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
+        model = CCTModule(args)
+        dataModule.mode = ("semi_train",)
+        trainer.fit(model=model, datamodule=dataModule)
+        trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
-if __name__ == "__main__":
-    args = base_parse_args(CCTModule)
-    seed_everything(123, workers=True)
 
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join("./", f"{args.save_path}"),
-        filename=f"{args.model}" + "-{epoch:02d}-{val_mIoU:.2f}",
-        mode="max",
-        save_weights_only=True,
-    )
-    if args.use_wandb:
-        wandb.init(project="SSLightning4Med", entity="gkeppler")
-        wandb_logger = WandbLogger(project="SSLightning4Med")
-        wandb.config.update(args)
+# if __name__ == "__main__":
+#     args = base_parse_args(CCTModule)
+#     seed_everything(123, workers=True)
 
-    dev_run = False  # not working when predicting with best_model checkpoint
-    trainer = pl.Trainer.from_argparse_args(
-        args,
-        fast_dev_run=dev_run,
-        max_epochs=args.epochs,
-        log_every_n_steps=2,
-        logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-        callbacks=[checkpoint_callback],
-        gpus=[0],
-        precision=16,
-        # accelerator="cpu",
-        # profiler="pytorch"
-    )
+#     checkpoint_callback = ModelCheckpoint(
+#         dirpath=os.path.join("./", f"{args.save_path}"),
+#         filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.2f}",
+#         mode="max",
+#         save_weights_only=True,
+#     )
+#     if args.use_wandb:
+#         wandb.init(project="SSLightning4Med", entity="gkeppler")
+#         wandb_logger = WandbLogger(project="SSLightning4Med")
+#         wandb.config.update(args)
 
-    augs = Augmentations(args)
-    color_map = get_color_map(args.dataset)
-    dataModule = SemiDataModule(
-        root_dir=args.data_root,
-        batch_size=args.batch_size,
-        split_yaml_path=args.split_file_path,
-        test_yaml_path=args.test_file_path,
-        pseudo_mask_path=args.pseudo_mask_path,
-        mode="semi_train",
-        color_map=color_map,
-    )
+#     dev_run = False  # not working when predicting with best_model checkpoint
+#     trainer = pl.Trainer.from_argparse_args(
+#         args,
+#         fast_dev_run=dev_run,
+#         max_epochs=args.epochs,
+#         log_every_n_steps=2,
+#         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
+#         callbacks=[checkpoint_callback],
+#         gpus=[0],
+#         precision=16,
+#         # accelerator="cpu",
+#         # profiler="pytorch"
+#     )
 
-    dataModule.val_transforms = augs.a_val_transforms()
-    dataModule.train_transforms = augs.a_train_transforms_labeled()
-    dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
+#     augs = Augmentations(args)
+#     color_map = get_color_map(args.dataset)
+#     dataModule = SemiDataModule(
+#         root_dir=args.data_root,
+#         batch_size=args.batch_size,
+#         split_yaml_path=args.split_file_path,
+#         test_yaml_path=args.test_file_path,
+#         pseudo_mask_path=args.pseudo_mask_path,
+#         mode="semi_train",
+#         color_map=color_map,
+#     )
 
-    model = CCTModule(args)
-    trainer.fit(model=model, datamodule=dataModule)
-    trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+#     dataModule.val_transforms = augs.a_val_transforms()
+#     dataModule.train_transforms = augs.a_train_transforms_labeled()
+#     dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
+
+#     CCTModule.pipeline(dataModule, trainer, args)

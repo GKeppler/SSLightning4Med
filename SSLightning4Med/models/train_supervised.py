@@ -1,35 +1,29 @@
-import os
 from argparse import ArgumentParser
 from typing import Any, Dict, List, Tuple, Union
 
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch import Tensor
 
-import wandb
-from SSLightning4Med.models.base_model import BaseModel
+from SSLightning4Med.models.base_model import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils.augmentations import Augmentations
-from SSLightning4Med.utils.utils import base_parse_args, get_color_map
 
 
-class STPlusPlusModel(BaseModel):
+class SupervisedModule(BaseModule):
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
         parser = parent_parser.add_argument_group("LightiningModel")
-        parser = super(STPlusPlusModel, STPlusPlusModel).add_model_specific_args(parser)
+        parser = super(SupervisedModule, SupervisedModule).add_model_specific_args(parser)
         parser.add_argument("--method", default="SupervisedOnly", type=str)
         return parent_parser
 
     def __init__(self, args: Any) -> None:
-        super(STPlusPlusModel, self).__init__(args)
+        super(SupervisedModule, self).__init__(args)
         self.args = args
 
     def forward(self, x: Tensor) -> Tensor:
-        x = self.model(x)
+        x = self.net(x)
         return x
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
@@ -58,56 +52,58 @@ class STPlusPlusModel(BaseModel):
         self.log("val_mIoU", mIOU)
         self.set_metrics()
 
+    @staticmethod
+    def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
+        model = SupervisedModule(args)
+        trainer.fit(model=model, datamodule=dataModule)
+        trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
-if __name__ == "__main__":
 
-    args = base_parse_args(STPlusPlusModel)
-    seed_everything(123, workers=True)
-    augs = Augmentations(args)
-    color_map = get_color_map(args.dataset)
-    dataModule = SemiDataModule(
-        root_dir=args.data_root,
-        batch_size=args.batch_size,
-        split_yaml_path=args.split_file_path,
-        test_yaml_path=args.test_file_path,
-        pseudo_mask_path=args.pseudo_mask_path,
-        test_transforms=augs.a_val_transforms(),
-        val_transforms=augs.a_val_transforms(),
-        train_transforms=augs.a_train_transforms_labeled(),
-        train_transforms_unlabeled=augs.a_train_transforms_unlabeled(),
-        mode="train",
-        color_map=color_map,
-    )
+# if __name__ == "__main__":
 
-    model = STPlusPlusModel(args)
+#     args = base_parse_args(SupervisedModule)
+#     seed_everything(123, workers=True)
+#     augs = Augmentations(args)
+#     color_map = get_color_map(args.dataset)
+#     dataModule = SemiDataModule(
+#         root_dir=args.data_root,
+#         batch_size=args.batch_size,
+#         split_yaml_path=args.split_file_path,
+#         test_yaml_path=args.test_file_path,
+#         pseudo_mask_path=args.pseudo_mask_path,
+#         mode="train",
+#         color_map=color_map,
+#         num_workers=args.n_workers,
+#     )
 
-    # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join("./", f"{args.save_path}"),
-        filename=f"{args.model}" + "-{epoch:02d}-{mIOU:.2f}",
-        mode="max",
-        save_weights_only=True,
-    )
-    if args.use_wandb:
-        wandb.init(project="SSLightning4Med", entity="gkeppler")
-        wandb_logger = WandbLogger(project="SSLightning4Med")
-        wandb.config.update(args)
+#     dataModule.val_transforms = augs.a_val_transforms()
+#     dataModule.train_transforms = augs.a_train_transforms_labeled()
+#     dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
 
-    dev_run = False  # not working when predicting with best_model checkpoint
-    trainer = pl.Trainer.from_argparse_args(
-        args,
-        fast_dev_run=dev_run,
-        max_epochs=args.epochs,
-        log_every_n_steps=2,
-        logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-        callbacks=[checkpoint_callback],
-        gpus=[0],
-        # accelerator="cpu",
-        # profiler="pytorch",
-    )
-    # <====================== Supervised training with labeled images (SupOnly) ======================>
+#     model = SupervisedModule(args)
 
-    trainer.fit(model=model, datamodule=dataModule)
+#     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
+#     checkpoint_callback = ModelCheckpoint(
+#         dirpath=os.path.join("./", f"{args.save_path}"),
+#         filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.2f}",
+#         mode="max",
+#         save_weights_only=True,
+#     )
+#     if args.use_wandb:
+#         wandb.init(project="SSLightning4Med", entity="gkeppler")
+#         wandb_logger = WandbLogger(project="SSLightning4Med")
+#         wandb.config.update(args)
 
-    # <====================== Test supervised model on testset (SupOnly) ======================>
-    trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+#     dev_run = False  # not working when predicting with best_model checkpoint
+#     trainer = pl.Trainer.from_argparse_args(
+#         args,
+#         fast_dev_run=dev_run,
+#         max_epochs=args.epochs,
+#         log_every_n_steps=2,
+#         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
+#         callbacks=[checkpoint_callback],
+#         gpus=[0],
+#         # accelerator="cpu",
+#         # profiler="pytorch",
+#     )
+#     SupervisedModule.pipeline(dataModule, trainer, args)

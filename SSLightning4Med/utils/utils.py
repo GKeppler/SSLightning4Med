@@ -210,7 +210,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.method is None:
         raise ValueError("no methodname in model_specific_args.")
     if args.method == "CCT":
-        args.model = "unet_cct"
+        args.net = "unet_cct"
 
     if args.data_root is None:
         args.data_root = {

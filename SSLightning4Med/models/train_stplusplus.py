@@ -9,23 +9,19 @@ import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 import yaml
-from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch import Tensor
 
-import wandb
-from SSLightning4Med.models.base_model import BaseModel
+from SSLightning4Med.models.base_model import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils.augmentations import Augmentations
-from SSLightning4Med.utils.utils import base_parse_args, get_color_map, meanIOU
+from SSLightning4Med.utils.utils import get_color_map, meanIOU
 
 
-class STPlusPlusModel(BaseModel):
+class STPlusPlusModule(BaseModule):
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
         parser = parent_parser.add_argument_group("LightiningModel")
-        parser = super(STPlusPlusModel, STPlusPlusModel).add_model_specific_args(parser)
+        parser = super(STPlusPlusModule, STPlusPlusModule).add_model_specific_args(parser)
         parser.add_argument("--method", default="St++")
         parser.add_argument(
             "--plus",
@@ -37,7 +33,7 @@ class STPlusPlusModel(BaseModel):
         return parent_parser
 
     def __init__(self, args: Any) -> None:
-        super(STPlusPlusModel, self).__init__(args)
+        super(STPlusPlusModule, self).__init__(args)
         self.checkpoints: List[torch.nn.Module] = []
         self.id_to_reliability: List[Tuple] = []
         self.previous_best: float = 0.0
@@ -47,7 +43,7 @@ class STPlusPlusModel(BaseModel):
 
     def base_forward(self, x: Tensor) -> Tensor:
         h, w = x.shape[-2:]
-        x = self.model(x)
+        x = self.net(x)
         x = F.interpolate(x, (h, w), mode="bilinear", align_corners=True)
         return x
 
@@ -103,13 +99,13 @@ class STPlusPlusModel(BaseModel):
             self.args.epochs * 2 // 3,
             self.args.epochs,
         ]:
-            self.checkpoints.append(deepcopy(self.model))
+            self.checkpoints.append(deepcopy(self.net))
 
     def validation_step(self, batch: Tuple[Tensor, Tensor, str], batch_idx: int) -> Dict[str, float]:
         img, mask, id = batch
         pred = self(img)
         self.val_IoU(pred, mask)
-        self.log("val_mIoU", self.val_IoU, on_step=True, on_epoch=True)
+        self.log("val_mIoU", self.val_IoU, on_step=False, on_epoch=True)
 
     def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
         mIOU = self.val_IoU.compute()
@@ -118,7 +114,7 @@ class STPlusPlusModel(BaseModel):
                 os.remove(
                     os.path.join(
                         self.args.save_path,
-                        "%s_mIOU%.2f.pth" % (self.args.model, self.previous_best),
+                        "%s_mIOU%.2f.pth" % (self.args.net, self.previous_best),
                     )
                 )
             self.previous_best = mIOU
@@ -126,7 +122,7 @@ class STPlusPlusModel(BaseModel):
                 self.state_dict(),
                 os.path.join(
                     self.args.save_path,
-                    "%s_mIOU%.2f.pth" % (self.args.model, mIOU),
+                    "%s_mIOU%.2f.pth" % (self.args.net, mIOU),
                 ),
             )
         self.set_metrics()
@@ -176,102 +172,110 @@ class STPlusPlusModel(BaseModel):
                 yaml.dump(yaml_dict, outfile, default_flow_style=False)
         self.set_metrics()
 
+    @staticmethod
+    def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
 
-if __name__ == "__main__":
-    args = base_parse_args(STPlusPlusModel)
-    seed_everything(123, workers=True)
-    augs = Augmentations(args)
-    color_map = get_color_map(args.dataset)
-    dataModule = SemiDataModule(
-        root_dir=args.data_root,
-        batch_size=args.batch_size,
-        split_yaml_path=args.split_file_path,
-        test_yaml_path=args.test_file_path,
-        pseudo_mask_path=args.pseudo_mask_path,
-        mode="train",
-        color_map=color_map,
-        num_workers=args.n_workers,
-    )
-
-    dataModule.val_transforms = augs.a_val_transforms()
-    dataModule.train_transforms = augs.a_train_transforms_labeled()
-    dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
-
-    model = STPlusPlusModel(args)
-
-    # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join("./", f"{args.save_path}"),
-        filename=f"{args.model}" + "-{epoch:02d}-{val_mIoU:.2f}",
-        mode="max",
-        save_weights_only=True,
-    )
-    if args.use_wandb:
-        wandb.init(project="SSLightning4Med", entity="gkeppler")
-        wandb_logger = WandbLogger(project="SSLightning4Med")
-        wandb.config.update(args)
-
-    dev_run = False  # not working when predicting with best_model checkpoint
-    trainer = pl.Trainer.from_argparse_args(
-        args,
-        fast_dev_run=dev_run,
-        max_epochs=args.epochs,
-        log_every_n_steps=2,
-        logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-        callbacks=[checkpoint_callback],
-        gpus=[0],
-        precision=16,
-        # accelerator="cpu",
-        # profiler="pytorch",
-    )
-    # <====================== Supervised training with labeled images (SupOnly) ======================>
-
-    trainer.fit(model=model, datamodule=dataModule)
-
-    # <====================== Test supervised model on testset (SupOnly) ======================>
-    trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
-
-    if not args.plus:
-        # <============================= Pseudolabel all unlabeled images =============================>
-
-        trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
-
-        # <======================== Re-training on labeled and unlabeled images ========================>
-
-        model = STPlusPlusModel(args)
-
-        # increase max epochs to double the amount
-        trainer.fit_loop.max_epochs = args.epochs * 2
-        dataModule.mode = "pseudo_train"
-        trainer.fit(model=model, datamodule=dataModule)
-    else:
-        # <===================================== Select Reliable IDs =====================================>
-        model.mode = "select_reliable"
-        trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
-        # <================================ Pseudo label reliable images =================================>
-        dataModule.split_yaml_path = os.path.join(args.reliable_id_path, "reliable_ids.yaml")
-        model.mode = "label"
-        trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
-        # <================================== The 1st stage re-training ==================================>
-
-        model = STPlusPlusModel(args)
-
-        # increase max epochs to double the amount
-        trainer.fit_loop.max_epochs = args.epochs * 2
-        dataModule.mode = "pseudo_train"
-        trainer.fit(model=model, datamodule=dataModule)
-        # <=============================== Pseudo label all images ================================>
-
-        dataModule.split_yaml_path = args.split_file_path
-        model.mode = "label"
-        trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
-
-        # <================================== The 2nd stage re-training ==================================>
-        model = STPlusPlusModel(args)
-
-        # increase max epochs to double the amount
-        trainer.fit_loop.max_epochs = args.epochs * 3
+        model = STPlusPlusModule(args)
+        # <====================== Supervised training with labeled images (SupOnly) ======================>
+        # trainer.tune(model, dataModule)
         trainer.fit(model=model, datamodule=dataModule)
 
-    # <====================== Test supervised model on testset (Semi) ======================>
-    trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+        # <====================== Test supervised model on testset (SupOnly) ======================>
+        trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+
+        if not args.plus:
+            # <============================= Pseudolabel all unlabeled images =============================>
+
+            trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+
+            # <======================== Re-training on labeled and unlabeled images ========================>
+
+            model = STPlusPlusModule(args)
+
+            # increase max epochs to double the amount
+            trainer.fit_loop.max_epochs = args.epochs * 2
+            dataModule.mode = "pseudo_train"
+            trainer.fit(model=model, datamodule=dataModule)
+        else:
+            # <===================================== Select Reliable IDs =====================================>
+            model.mode = "select_reliable"
+            trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+            # <================================ Pseudo label reliable images =================================>
+            dataModule.split_yaml_path = os.path.join(args.reliable_id_path, "reliable_ids.yaml")
+            model.mode = "label"
+            trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+            # <================================== The 1st stage re-training ==================================>
+
+            model = STPlusPlusModule(args)
+
+            # increase max epochs to double the amount
+            trainer.fit_loop.max_epochs = args.epochs * 2
+            dataModule.mode = "pseudo_train"
+            trainer.fit(model=model, datamodule=dataModule)
+            # <=============================== Pseudo label all images ================================>
+
+            dataModule.split_yaml_path = args.split_file_path
+            model.mode = "label"
+            trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+
+            # <================================== The 2nd stage re-training ==================================>
+            model = STPlusPlusModule(args)
+
+            # increase max epochs to double the amount
+            trainer.fit_loop.max_epochs = args.epochs * 3
+            trainer.fit(model=model, datamodule=dataModule)
+
+        # <====================== Test supervised model on testset (Semi) ======================>
+        trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+
+
+# if __name__ == "__main__":
+#     module = STPlusPlusModule
+
+#     args = base_parse_args(module)
+#     seed_everything(123, workers=True)
+#     augs = Augmentations(args)
+#     color_map = get_color_map(args.dataset)
+#     dataModule = SemiDataModule(
+#         root_dir=args.data_root,
+#         batch_size=args.batch_size,
+#         split_yaml_path=args.split_file_path,
+#         test_yaml_path=args.test_file_path,
+#         pseudo_mask_path=args.pseudo_mask_path,
+#         mode="train",
+#         color_map=color_map,
+#         num_workers=args.n_workers,
+#     )
+
+#     dataModule.val_transforms = augs.a_val_transforms()
+#     dataModule.train_transforms = augs.a_train_transforms_labeled()
+#     dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
+
+
+#     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
+#     checkpoint_callback = ModelCheckpoint(
+#         dirpath=os.path.join("./", f"{args.save_path}"),
+#         filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.2f}",
+#         mode="max",
+#         save_weights_only=True,
+#     )
+#     if args.use_wandb:
+#         wandb.init(project="SSLightning4Med", entity="gkeppler")
+#         wandb_logger = WandbLogger(project="SSLightning4Med")
+#         wandb.config.update(args)
+
+#     dev_run = False  # not working when predicting with best_model checkpoint
+#     trainer = pl.Trainer.from_argparse_args(
+#         args,
+#         fast_dev_run=dev_run,
+#         max_epochs=args.epochs,
+#         log_every_n_steps=2,
+#         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
+#         callbacks=[checkpoint_callback],
+#         gpus=[0],
+#         #precision=16,
+#         # accelerator="cpu",
+#         # profiler="pytorch",
+#         auto_lr_find=True,
+#     )
+#     module.pipeline(dataModule, trainer, checkpoint_callback, args)

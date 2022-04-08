@@ -93,4 +93,6 @@ wandb/*
 
 # Mypy cache
 .mypy_cache/
+
 monkeytype.sqlite3
+*.ckpt
