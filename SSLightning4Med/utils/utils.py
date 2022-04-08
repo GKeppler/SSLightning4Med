@@ -202,16 +202,13 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--reliable-id-path", type=str, default=None)
     parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
     # add model specific args
-    parser = LightningModule.add_model_specific_args(parent_parser=parser)
+    parser = LightningModule.add_model_specific_args(parser)
     # add all the availabele trainer options to argparse
     # ie: now --gpus --num_nodes ... --fast_dev_run all work in the cli
     parser = pl.Trainer.add_argparse_args(parser)
     args = parser.parse_args()
     if args.method is None:
         raise ValueError("no methodname in model_specific_args.")
-    if args.method == "CCT":
-        args.net = "unet_cct"
-
     if args.data_root is None:
         args.data_root = {
             "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",

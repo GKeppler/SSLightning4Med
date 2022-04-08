@@ -172,7 +172,7 @@ class UNet(nn.Module):
         return output
 
 
-class SmallUNet(nn.Module):
+class small_UNet(nn.Module):
     def __init__(self, in_chns: int, class_num: int) -> None:
         super().__init__()
 
@@ -200,6 +200,35 @@ class UNet_CCT(nn.Module):
         params = {
             "in_chns": in_chns,
             "feature_chns": [64, 128, 256, 512, 1024],
+            "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
+            "class_num": class_num,
+            "bilinear": False,
+        }
+        self.encoder = Encoder(params)
+        self.main_decoder = Decoder(params)
+        self.aux_decoder1 = Decoder(params)
+        self.aux_decoder2 = Decoder(params)
+        self.aux_decoder3 = Decoder(params)
+
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+        feature = self.encoder(x)
+        main_seg = self.main_decoder(feature)
+        aux1_feature = [FeatureNoise()(i) for i in feature]
+        aux_seg1 = self.aux_decoder1(aux1_feature)
+        aux2_feature = [Dropout(i) for i in feature]
+        aux_seg2 = self.aux_decoder2(aux2_feature)
+        aux3_feature = [FeatureDropout(i) for i in feature]
+        aux_seg3 = self.aux_decoder3(aux3_feature)
+        return main_seg, aux_seg1, aux_seg2, aux_seg3
+
+
+class small_UNet_CCT(nn.Module):
+    def __init__(self, in_chns: int, class_num: int) -> None:
+        super().__init__()
+
+        params = {
+            "in_chns": in_chns,
+            "feature_chns": [8, 16, 32, 64, 128],
             "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
             "class_num": class_num,
             "bilinear": False,

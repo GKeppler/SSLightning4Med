@@ -1,16 +1,13 @@
-from argparse import ArgumentParser
 from typing import Any, Dict, List, Tuple
 
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
-from torch.nn import CrossEntropyLoss
 from torch.optim import SGD
 
 from SSLightning4Med.models.base_model import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.nets.unet import UNet_CCT
 from SSLightning4Med.utils.utils import sigmoid_rampup, wandb_image_mask
 
 
@@ -20,18 +17,9 @@ class CCTModule(BaseModule):
     - custom unet with aux decoders 1-3
     """
 
-    @staticmethod
-    def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
-        parser = parent_parser.add_argument_group("LightiningModel")
-        parser = super(CCTModule, CCTModule).add_model_specific_args(parser)
-        parser.add_argument("--method", default="CCT")
-        return parent_parser
-
     def __init__(self, args: Any):
         super(CCTModule, self).__init__(args)
-        self.net = UNet_CCT(in_chns=3, class_num=args.n_class if args.n_class > 2 else 1)
         self.consistency = 0.1
-        self.criterion = CrossEntropyLoss()
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         batch_unusupervised = batch["unlabeled"]
@@ -66,13 +54,12 @@ class CCTModule(BaseModule):
 
         consistency_loss = (consistency_loss_aux1 + consistency_loss_aux2 + consistency_loss_aux3) / 3
         loss = supervised_loss + consistency_loss * consistency_weight
-        return loss
+        return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
         pred = self(img)[0]
         self.val_IoU(pred, mask)
-        self.log("val_loss", self.val_loss)
         self.log("val_mIoU", self.val_IoU, on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_idx):  # type: ignore
@@ -80,7 +67,7 @@ class CCTModule(BaseModule):
         pred = self.net(img)[0]
         pred = torch.argmax(pred, dim=1).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
-        return wandb_image_mask(img, mask, pred, self.args.n_class)
+        return wandb_image_mask(img, mask, pred, self.n_class)
 
     def configure_optimizers(self) -> List:
         optimizer = SGD(self.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
@@ -89,7 +76,7 @@ class CCTModule(BaseModule):
     @staticmethod
     def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
         model = CCTModule(args)
-        dataModule.mode = ("semi_train",)
+        dataModule.mode = "semi_train"
         trainer.fit(model=model, datamodule=dataModule)
         trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 

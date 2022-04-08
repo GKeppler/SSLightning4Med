@@ -6,7 +6,9 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 import wandb
+from SSLightning4Med.models.base_model import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
+from SSLightning4Med.models.train_bolt import BoltModule
 from SSLightning4Med.models.train_CCT import CCTModule
 from SSLightning4Med.models.train_stplusplus import STPlusPlusModule
 from SSLightning4Med.models.train_supervised import SupervisedModule
@@ -14,14 +16,10 @@ from SSLightning4Med.utils.augmentations import Augmentations
 from SSLightning4Med.utils.utils import base_parse_args, get_color_map
 
 if __name__ == "__main__":
-    module = {
-        "st++": STPlusPlusModule,
-        "cct": CCTModule,
-        "supervised": SupervisedModule,
-    }["supervised"]
-
-    args = base_parse_args(module)
+    args = base_parse_args(BaseModule)
     seed_everything(123, workers=True)
+
+    # Define DataModule with Augmentations
     augs = Augmentations(args)
     color_map = get_color_map(args.dataset)
     dataModule = SemiDataModule(
@@ -52,6 +50,7 @@ if __name__ == "__main__":
         wandb_logger = WandbLogger(project="SSLightning4Med")
         wandb.config.update(args)
 
+    # define Trainer
     dev_run = False  # not working when predicting with best_model checkpoint
     trainer = pl.Trainer.from_argparse_args(
         args,
@@ -64,7 +63,15 @@ if __name__ == "__main__":
         # precision=16,
         # accelerator="cpu",
         # profiler="pytorch",
-        auto_lr_find=True,
+        # auto_lr_find=True,
         # track_grad_norm=True,
     )
+    # define Module based on methods
+    module = {
+        "St++": STPlusPlusModule,
+        "CCT": CCTModule,
+        "Supervised": SupervisedModule,
+        "Bolt": BoltModule,
+    }[args.method]
+
     module.pipeline(dataModule, trainer, checkpoint_callback, args)

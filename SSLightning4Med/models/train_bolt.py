@@ -1,4 +1,3 @@
-from argparse import ArgumentParser
 from typing import Any, Dict, Tuple
 
 import pytorch_lightning as pl
@@ -12,16 +11,9 @@ from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.deeplabv3plus import DeepLabV3Plus
 
 
-class Bolt(BaseModule):
-    @staticmethod
-    def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
-        parser = parent_parser.add_argument_group("LightiningModel")
-        parser = super(Bolt, Bolt).add_model_specific_args(parser)
-        parser.add_argument("--method", default="Bolt", type=str)
-        return parent_parser
-
+class BoltModule(BaseModule):
     def __init__(self, args: Any) -> None:
-        super(Bolt, self).__init__(args)
+        super(BoltModule, self).__init__(args)
         self.backbone = SwAV.model
         self.net = DeepLabV3Plus(self.backbone, args.n_class)
         self.args = args
@@ -49,6 +41,6 @@ class Bolt(BaseModule):
 
     @staticmethod
     def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
-        model = Bolt(args)
+        model = BoltModule(args)
         trainer.fit(model=model, datamodule=dataModule)
         trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)

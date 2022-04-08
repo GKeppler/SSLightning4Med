@@ -4,33 +4,50 @@ from typing import List
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
 from torch.optim import SGD
 from torchmetrics import IoU
 
 from SSLightning4Med.models.data_module import SemiDataModule
 
 # from SSLightning4Med.nets.small_unet import SmallUnet2
-from SSLightning4Med.nets.unet import SmallUNet, UNet, UNet_CCT
+from SSLightning4Med.nets.unet import UNet, UNet_CCT, small_UNet, small_UNet_CCT
+from SSLightning4Med.utils.losses import CE_loss
 from SSLightning4Med.utils.utils import meanIOU, mulitmetrics, wandb_image_mask
 
-net_zoo = {"unet": UNet, "smallUnet": SmallUNet, "unet_cct": UNet_CCT}
+net_zoo = {"unet": (UNet, UNet_CCT), "smallUnet": (small_UNet, small_UNet_CCT)}
 
 
 class BaseModule(pl.LightningModule):
+    @staticmethod
+    def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
+        parser.add_argument("--lr", type=float, default=0.001)
+        parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="unet")
+        parser.add_argument("--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised"])
+
+        # For St++ Model
+        parser.add_argument(
+            "--plus",
+            dest="plus",
+            default=True,
+            help="whether to use ST++",
+        )
+        parser.add_argument("--use-tta", default=True, help="whether to use Test Time Augmentation")
+        return parser
+
     def __init__(self, args) -> None:  # type: ignore
         super(BaseModule, self).__init__()
         self.previous_best = 0.0
         self.lr = args.lr
         self.n_class = args.n_class
         self.use_wandb = args.use_wandb
-        self.net = net_zoo[args.net](in_chns=3, class_num=args.n_class if args.n_class > 2 else 1)
-        # https://discuss.pytorch.org/t/how-to-use-bce-loss-and-crossentropyloss-correctly/89049
-        if args.n_class == 2:
-            self.criterion = BCEWithLogitsLoss()
+        if args.method == "CCT":
+            self.net = net_zoo[args.net][1]
         else:
-            self.criterion = CrossEntropyLoss()
+            self.net = net_zoo[args.net][0]
+        self.net = self.net(in_chns=3, class_num=args.n_class if args.n_class > 2 else 1)
 
+        # https://discuss.pytorch.org/t/how-to-use-bce-loss-and-crossentropyloss-correctly/89049
+        self.criterion = CE_loss(self.n_class)
         self.val_IoU = IoU(
             # ignore_index=0,
             num_classes=self.n_class,
@@ -41,12 +58,6 @@ class BaseModule(pl.LightningModule):
         self.metric = meanIOU(num_classes=self.n_class)
         self.predict_metric = meanIOU(num_classes=self.n_class)
         self.test_metrics = mulitmetrics(num_classes=self.n_class)
-
-    @staticmethod
-    def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
-        parser.add_argument("--lr", type=float, default=0.001)
-        parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="unet")
-        return parser
 
     def forward(self, x):  # type: ignore
         return self.net(x)

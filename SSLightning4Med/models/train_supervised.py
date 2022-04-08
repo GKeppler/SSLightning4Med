@@ -1,4 +1,3 @@
-from argparse import ArgumentParser
 from typing import Any, Dict, List, Tuple, Union
 
 import pytorch_lightning as pl
@@ -11,13 +10,6 @@ from SSLightning4Med.models.data_module import SemiDataModule
 
 
 class SupervisedModule(BaseModule):
-    @staticmethod
-    def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
-        parser = parent_parser.add_argument_group("LightiningModel")
-        parser = super(SupervisedModule, SupervisedModule).add_model_specific_args(parser)
-        parser.add_argument("--method", default="SupervisedOnly", type=str)
-        return parent_parser
-
     def __init__(self, args: Any) -> None:
         super(SupervisedModule, self).__init__(args)
         self.args = args

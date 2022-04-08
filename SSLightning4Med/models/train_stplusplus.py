@@ -1,5 +1,4 @@
 import os
-from argparse import ArgumentParser
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -18,20 +17,6 @@ from SSLightning4Med.utils.utils import get_color_map, meanIOU
 
 
 class STPlusPlusModule(BaseModule):
-    @staticmethod
-    def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
-        parser = parent_parser.add_argument_group("LightiningModel")
-        parser = super(STPlusPlusModule, STPlusPlusModule).add_model_specific_args(parser)
-        parser.add_argument("--method", default="St++")
-        parser.add_argument(
-            "--plus",
-            dest="plus",
-            default=True,
-            help="whether to use ST++",
-        )
-        parser.add_argument("--use-tta", default=True, help="whether to use Test Time Augmentation")
-        return parent_parser
-
     def __init__(self, args: Any) -> None:
         super(STPlusPlusModule, self).__init__(args)
         self.checkpoints: List[torch.nn.Module] = []
@@ -81,14 +66,6 @@ class STPlusPlusModule(BaseModule):
             img = torch.cat((img, img_pseudo), 0)
             mask = torch.cat((mask, mask_pseudo), 0)
         pred = self(img)
-        # n = 1 is a problem for metrics. n = 2 for the unet output
-        if self.args.n_class == 2:
-            # BCEloss
-            mask = mask.float().squeeze()
-            pred = pred.squeeze()
-        else:
-            # CEloss
-            mask = mask.long()
         loss = self.criterion(pred, mask)
         self.log("train_loss", loss, sync_dist=True, on_epoch=True, on_step=True)
         return {"loss": loss}
@@ -105,6 +82,7 @@ class STPlusPlusModule(BaseModule):
         img, mask, id = batch
         pred = self(img)
         self.val_IoU(pred, mask)
+        # self.log("val_loss", self.criterion(pred, mask), on_epoch=True)
         self.log("val_mIoU", self.val_IoU, on_step=False, on_epoch=True)
 
     def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
