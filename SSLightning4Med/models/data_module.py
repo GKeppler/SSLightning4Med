@@ -99,7 +99,14 @@ class SemiDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
                 pin_memory=True,
             )
-            return {"unlabeled": loader_unlabeled, "labeled": loader_labeled}
+            combined_loaders = CombinedLoader(
+                {
+                    "unlabeled": loader_unlabeled,
+                    "labeled": loader_labeled,
+                },
+                "max_size_cycle",
+            )
+            return combined_loaders
         else:
             raise ValueError("Wrong dataloader mode for training")
 

@@ -15,7 +15,8 @@ from torch.utils.data import DataLoader
 
 from SSLightning4Med.models.dataset import BaseDataset
 from SSLightning4Med.models.train_CCT import CCTModule
-from SSLightning4Med.utils import base_parse_args, get_color_map
+from SSLightning4Med.train import base_parse_args
+from SSLightning4Med.utils.utils import get_color_map
 
 # from https://discuss.pytorch.org/t/computing-the-mean-and-std-of-dataset/34949/17
 if __name__ == "__main__":

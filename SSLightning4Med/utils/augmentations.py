@@ -9,9 +9,9 @@ class Augmentations:
         self.args = args
         self.mean, self.std = {
             "melanoma": ([0.7116, 0.5834, 0.5337], [0.1471, 0.1646, 0.1795]),
-            "pneumothorax": ([0.5380, 0.5380, 0.5380], [0.2641, 0.2641, 0.2641]),
-            "breastCancer": ([0.3298, 0.3298, 0.3298], [0.2218, 0.2218, 0.2218]),
-            "multiorgan": ([0.1935, 0.1935, 0.1935], [0.1889, 0.1889, 0.1889]),
+            "pneumothorax": (0.5380, 0.2641),
+            "breastCancer": (0.3298, 0.2218),
+            "multiorgan": (0.1935, 0.1889),
         }[args.dataset]
 
     def a_train_transforms_labeled(self):

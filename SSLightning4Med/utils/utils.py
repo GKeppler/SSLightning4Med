@@ -1,13 +1,10 @@
-import os
-from argparse import ArgumentParser
-from typing import Any, Tuple
+from typing import Tuple
 
 import cv2
 import numpy as np
-import pytorch_lightning as pl
 from medpy import metric
 from numpy import ndarray
-from torch import Tensor
+from torch import Tensor, argmax, tensor
 from wandb.sdk.data_types import Image
 
 import wandb
@@ -107,6 +104,19 @@ class mulitmetrics:
         return overall_acc, meanIOU, avg_dice, medpy_dc, medpy_jc, medpy_hd, medpy_asd
 
 
+class getOneHot:
+    def __init__(self, num_classes: int) -> None:
+        self.num_classes = num_classes
+        self.threshold = tensor([0.5])
+
+    def __call__(self, pred: Tensor) -> Tensor:
+        if self.num_classes == 2:
+            pred = (pred.sigmoid().cpu() > self.threshold).float() * 1
+        else:
+            pred = argmax(pred, dim=1)
+        return pred
+
+
 def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) -> Image:
     class_labeles = dict((el, "something") for el in list(range(nclass)))
     class_labeles.update({0: "nothing"})
@@ -164,82 +174,3 @@ def get_color_map(dataset):
         ],
         "multiorgan": [[s * 10, s * 10, s * 10] for s in range(0, 14)],
     }[dataset]
-
-
-def base_parse_args(LightningModule) -> Any:  # type: ignore
-    parser = ArgumentParser()
-    # basic settings
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        choices=["melanoma", "pneumothorax", "breastCancer", "multiorgan"],
-        default="multiorgan",
-    )
-    parser.add_argument(
-        "--data-root",
-        type=str,
-        default=None,
-    )
-    parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--crop-size", type=int, default=None)
-    parser.add_argument("--base-size", type=int, default=None)
-    parser.add_argument("--n-class", type=int, default=None)
-    parser.add_argument("--n-workers", type=int, default=8)
-
-    parser.add_argument("--val-split", type=str, default="val_split_0")
-
-    # semi-supervised settings
-    parser.add_argument("--split", type=str, default="1_30")
-    parser.add_argument("--shuffle", type=int, default=0)
-    # these are derived from the above split, shuffle and dataset. They dont need to be set
-    parser.add_argument(
-        "--split-file-path", type=str, default=None
-    )  # "dataset/splits/melanoma/1_30/split_0/split_sample.yaml")
-    parser.add_argument("--test-file-path", type=str, default=None)  # "dataset/splits/melanoma/test_sample.yaml")
-    parser.add_argument("--pseudo-mask-path", type=str, default=None)
-    parser.add_argument("--save-path", type=str, default=None)
-    parser.add_argument("--reliable-id-path", type=str, default=None)
-    parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
-    # add model specific args
-    parser = LightningModule.add_model_specific_args(parser)
-    # add all the availabele trainer options to argparse
-    # ie: now --gpus --num_nodes ... --fast_dev_run all work in the cli
-    parser = pl.Trainer.add_argparse_args(parser)
-    args = parser.parse_args()
-    if args.method is None:
-        raise ValueError("no methodname in model_specific_args.")
-    if args.data_root is None:
-        args.data_root = {
-            "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
-            "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
-            "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
-            "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
-        }[args.dataset]
-
-    if args.epochs is None:
-        args.epochs = {"melanoma": 80}[args.dataset]
-    if args.crop_size is None:
-        args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256, "multiorgan": 256}[args.dataset]
-    if args.base_size is None:
-        args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 512, "multiorgan": 512}[args.dataset]
-    if args.n_class is None:
-        args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2, "multiorgan": 14}[args.dataset]
-    if args.split_file_path is None:
-        args.split_file_path = (
-            f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
-        )
-    if args.test_file_path is None:
-        args.test_file_path = f"SSLightning4Med/data/splits/{args.dataset}/test.yaml"
-    if args.pseudo_mask_path is None:
-        args.pseudo_mask_path = f"data/pseudo_masks/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
-    if args.save_path is None:
-        args.save_path = f"models/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
-    if args.reliable_id_path is None:
-        args.reliable_id_path = f"data/reliable_ids/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
-
-    if not os.path.exists(args.save_path):
-        os.makedirs(args.save_path)
-    if not os.path.exists(args.pseudo_mask_path):
-        os.makedirs(args.pseudo_mask_path)
-    return args

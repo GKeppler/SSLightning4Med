@@ -54,12 +54,15 @@ class BaseDataset:
         id = self.id_list[idx]
         img_path = os.path.join(self.root_dir, id.split(" ")[0])
         # Read an image with OpenCV
-        image = cv2.imread(img_path)
+        image = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
         if image is None:
             raise ValueError("No image loaded. Check Dataset.")
         # By default OpenCV uses BGR color space for color images,
         # so we need to convert the image to RGB color space.
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # check if image is grayscale:
+        if len(image.shape) == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.pseudo_mask_path is not None:
             fname = os.path.basename(id.split(" ")[1])
             mask = cv2.imread(os.path.join(self.pseudo_mask_path, fname), cv2.IMREAD_UNCHANGED)

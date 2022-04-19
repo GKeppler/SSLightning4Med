@@ -109,7 +109,7 @@ class STPlusPlusModule(BaseModule):
         img, mask, id = batch
         if self.mode == "label":
             pred = self(img, tta=True)
-            pred = torch.argmax(pred, dim=1).cpu()
+            pred = self.oneHot(pred.cpu())
             pred = pred.squeeze(0).numpy().astype(np.uint8)
             pred = np.array(self.color_map)[pred]
             cv2.imwrite(

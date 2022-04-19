@@ -1,4 +1,6 @@
 import os
+from argparse import ArgumentParser
+from typing import Any
 
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
@@ -13,7 +15,90 @@ from SSLightning4Med.models.train_CCT import CCTModule
 from SSLightning4Med.models.train_stplusplus import STPlusPlusModule
 from SSLightning4Med.models.train_supervised import SupervisedModule
 from SSLightning4Med.utils.augmentations import Augmentations
-from SSLightning4Med.utils.utils import base_parse_args, get_color_map
+from SSLightning4Med.utils.utils import get_color_map
+
+
+def base_parse_args(LightningModule) -> Any:  # type: ignore
+    parser = ArgumentParser()
+    # basic settings
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["melanoma", "pneumothorax", "breastCancer", "multiorgan"],
+        default="multiorgan",
+    )
+    parser.add_argument(
+        "--data-root",
+        type=str,
+        default=None,
+    )
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--crop-size", type=int, default=None)
+    parser.add_argument("--base-size", type=int, default=None)
+    parser.add_argument("--n-class", type=int, default=None)
+    parser.add_argument("--n-channel", type=int, default=None)
+    parser.add_argument("--n-workers", type=int, default=8)
+
+    parser.add_argument("--val-split", type=str, default="val_split_0")
+
+    # semi-supervised settings
+    parser.add_argument("--split", type=str, default="1_30")
+    parser.add_argument("--shuffle", type=int, default=0)
+    # these are derived from the above split, shuffle and dataset. They dont need to be set
+    parser.add_argument(
+        "--split-file-path", type=str, default=None
+    )  # "dataset/splits/melanoma/1_30/split_0/split_sample.yaml")
+    parser.add_argument("--test-file-path", type=str, default=None)  # "dataset/splits/melanoma/test_sample.yaml")
+    parser.add_argument("--pseudo-mask-path", type=str, default=None)
+    parser.add_argument("--save-path", type=str, default=None)
+    parser.add_argument("--reliable-id-path", type=str, default=None)
+    parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
+    # add model specific args
+    parser = LightningModule.add_model_specific_args(parser)
+    # add all the availabele trainer options to argparse
+    # ie: now --gpus --num_nodes ... --fast_dev_run all work in the cli
+    parser = pl.Trainer.add_argparse_args(parser)
+    args = parser.parse_args()
+    if args.method is None:
+        raise ValueError("no methodname in model_specific_args.")
+    if args.data_root is None:
+        args.data_root = {
+            "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
+            "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
+            "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
+            "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
+        }[args.dataset]
+
+    if args.epochs is None:
+        args.epochs = {"melanoma": 80}[args.dataset]
+    if args.crop_size is None:
+        args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256, "multiorgan": 256}[args.dataset]
+    if args.base_size is None:
+        args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 512, "multiorgan": 512}[args.dataset]
+    if args.n_class is None:
+        args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2, "multiorgan": 14}[args.dataset]
+    if args.n_channel is None:
+        args.n_channel = {"melanoma": 3, "breastCancer": 1, "pneumothorax": 1, "multiorgan": 1}[args.dataset]
+    if args.split_file_path is None:
+        args.split_file_path = (
+            f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
+        )
+    if args.test_file_path is None:
+        args.test_file_path = f"SSLightning4Med/data/splits/{args.dataset}/test.yaml"
+    if args.pseudo_mask_path is None:
+        args.pseudo_mask_path = f"data/pseudo_masks/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
+    if args.save_path is None:
+        args.save_path = f"models/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
+    if args.reliable_id_path is None:
+        args.reliable_id_path = f"data/reliable_ids/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
+
+    if not os.path.exists(args.save_path):
+        os.makedirs(args.save_path)
+    if not os.path.exists(args.pseudo_mask_path):
+        os.makedirs(args.pseudo_mask_path)
+    return args
+
 
 if __name__ == "__main__":
     args = base_parse_args(BaseModule)
@@ -55,16 +140,19 @@ if __name__ == "__main__":
     trainer = pl.Trainer.from_argparse_args(
         args,
         fast_dev_run=dev_run,
-        max_epochs=args.epochs,
+        max_epochs=1000,  # args.epochs,
         log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
-        gpus=[0],
+        # gpus=[0],
         # precision=16,
-        # accelerator="cpu",
+        accelerator="cpu",
         # profiler="pytorch",
         # auto_lr_find=True,
         # track_grad_norm=True,
+        # detect_anomaly=True,
+        # overfit_batches=1,
+        # limit_val_batches=0.5
     )
     # define Module based on methods
     module = {

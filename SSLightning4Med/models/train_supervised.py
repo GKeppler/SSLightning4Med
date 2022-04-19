@@ -1,7 +1,6 @@
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Tuple
 
 import pytorch_lightning as pl
-import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 
@@ -21,28 +20,9 @@ class SupervisedModule(BaseModule):
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         img, mask, _ = batch["labeled"]
         pred = self(img)
-        if self.args.n_class == 2:
-            # BCEloss
-            mask = mask.float().squeeze()
-            pred = pred.squeeze()
-        else:
-            # CEloss
-            mask = mask.long()
         loss = self.criterion(pred, mask)
         self.log("train_loss", loss, sync_dist=True, on_epoch=True, on_step=True)
         return {"loss": loss}
-
-    def validation_step(self, batch: Tuple[Tensor, Tensor, str], batch_idx: int) -> Dict[str, float]:
-        img, mask, id = batch
-        pred = self(img)
-        self.metric.add_batch(torch.argmax(pred, dim=1).cpu().numpy(), mask.cpu().numpy())
-        val_acc = self.metric.evaluate()[-1]
-        return {"mIOU": val_acc}
-
-    def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
-        mIOU = outputs[-1]["mIOU"]
-        self.log("val_mIoU", mIOU)
-        self.set_metrics()
 
     @staticmethod
     def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:

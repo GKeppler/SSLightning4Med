@@ -65,7 +65,7 @@ class CCTModule(BaseModule):
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
         pred = self.net(img)[0]
-        pred = torch.argmax(pred, dim=1).cpu()
+        pred = self.oneHot(pred.cpu())
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
         return wandb_image_mask(img, mask, pred, self.n_class)
 

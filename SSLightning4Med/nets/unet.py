@@ -158,7 +158,7 @@ class UNet(nn.Module):
         params = {
             "in_chns": in_chns,
             "feature_chns": [64, 128, 256, 512, 1024],
-            "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
+            "dropout": [0, 0, 0, 0, 0],  # [0.05, 0.1, 0.2, 0.3, 0.5],
             "class_num": class_num,
             "bilinear": False,
         }
@@ -179,7 +179,7 @@ class small_UNet(nn.Module):
         params = {
             "in_chns": in_chns,
             "feature_chns": [8, 16, 32, 64, 128],
-            "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
+            "dropout": [0.0, 0.0, 0.0, 0.0, 0.0],
             "class_num": class_num,
             "bilinear": False,
         }
@@ -200,7 +200,7 @@ class UNet_CCT(nn.Module):
         params = {
             "in_chns": in_chns,
             "feature_chns": [64, 128, 256, 512, 1024],
-            "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
+            "dropout": [0.0, 0.0, 0.0, 0.0, 0.0],
             "class_num": class_num,
             "bilinear": False,
         }
@@ -229,7 +229,7 @@ class small_UNet_CCT(nn.Module):
         params = {
             "in_chns": in_chns,
             "feature_chns": [8, 16, 32, 64, 128],
-            "dropout": [0.05, 0.1, 0.2, 0.3, 0.5],
+            "dropout": [0.0, 0.0, 0.0, 0.0, 0.0],
             "class_num": class_num,
             "bilinear": False,
         }
