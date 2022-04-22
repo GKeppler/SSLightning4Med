@@ -2,6 +2,8 @@ from typing import Tuple
 
 import cv2
 import numpy as np
+import torch
+import torchvision
 from medpy import metric
 from numpy import ndarray
 from torch import Tensor, argmax, tensor
@@ -112,9 +114,19 @@ class getOneHot:
     def __call__(self, pred: Tensor) -> Tensor:
         if self.num_classes == 2:
             pred = (pred.sigmoid().cpu() > self.threshold).float() * 1
+            pred = pred.squeeze(dim=1)
         else:
             pred = argmax(pred, dim=1)
         return pred
+
+
+def tensorboard_image_grid(pred: Tensor, color_map: ndarray) -> None:
+    # log pred mask
+    pred = pred.squeeze(1).numpy().astype(np.uint8)
+    pred = np.array(color_map)[pred]
+    pred = np.moveaxis(pred, -1, 1)
+    return torchvision.utils.make_grid(torch.from_numpy(pred))
+    # self.logger.experiment.add_image('generated_images', grid, trainer.global_step)
 
 
 def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) -> Image:

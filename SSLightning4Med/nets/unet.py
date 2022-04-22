@@ -70,7 +70,7 @@ class Encoder(nn.Module):
         self.params = params
         self.in_chns = self.params["in_chns"]
         self.ft_chns = self.params["feature_chns"]
-        self.n_class = self.params["class_num"]
+        self.n_class = self.params["n_class"]
         self.bilinear = self.params["bilinear"]
         self.dropout = self.params["dropout"]
         assert len(self.ft_chns) == 5
@@ -95,7 +95,7 @@ class Decoder(nn.Module):
         self.params = params
         self.in_chns = self.params["in_chns"]
         self.ft_chns = self.params["feature_chns"]
-        self.n_class = self.params["class_num"]
+        self.n_class = self.params["n_class"]
         self.bilinear = self.params["bilinear"]
         assert len(self.ft_chns) == 5
 
@@ -152,14 +152,14 @@ class FeatureNoise(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(self, in_chns: int, class_num: int) -> None:
+    def __init__(self, in_chns: int, n_class: int) -> None:
         super().__init__()
 
         params = {
             "in_chns": in_chns,
             "feature_chns": [64, 128, 256, 512, 1024],
             "dropout": [0, 0, 0, 0, 0],  # [0.05, 0.1, 0.2, 0.3, 0.5],
-            "class_num": class_num,
+            "n_class": n_class,
             "bilinear": False,
         }
 
@@ -173,14 +173,14 @@ class UNet(nn.Module):
 
 
 class small_UNet(nn.Module):
-    def __init__(self, in_chns: int, class_num: int) -> None:
+    def __init__(self, in_chns: int, n_class: int) -> None:
         super().__init__()
 
         params = {
             "in_chns": in_chns,
             "feature_chns": [8, 16, 32, 64, 128],
             "dropout": [0.0, 0.0, 0.0, 0.0, 0.0],
-            "class_num": class_num,
+            "n_class": n_class,
             "bilinear": False,
         }
 
@@ -194,14 +194,14 @@ class small_UNet(nn.Module):
 
 
 class UNet_CCT(nn.Module):
-    def __init__(self, in_chns: int, class_num: int) -> None:
+    def __init__(self, in_chns: int, n_class: int) -> None:
         super().__init__()
 
         params = {
             "in_chns": in_chns,
             "feature_chns": [64, 128, 256, 512, 1024],
             "dropout": [0.0, 0.0, 0.0, 0.0, 0.0],
-            "class_num": class_num,
+            "n_class": n_class,
             "bilinear": False,
         }
         self.encoder = Encoder(params)
@@ -223,14 +223,14 @@ class UNet_CCT(nn.Module):
 
 
 class small_UNet_CCT(nn.Module):
-    def __init__(self, in_chns: int, class_num: int) -> None:
+    def __init__(self, in_chns: int, n_class: int) -> None:
         super().__init__()
 
         params = {
             "in_chns": in_chns,
             "feature_chns": [8, 16, 32, 64, 128],
             "dropout": [0.0, 0.0, 0.0, 0.0, 0.0],
-            "class_num": class_num,
+            "n_class": n_class,
             "bilinear": False,
         }
         self.encoder = Encoder(params)

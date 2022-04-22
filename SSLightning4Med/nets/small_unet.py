@@ -8,10 +8,10 @@ import torch.nn.functional as F
 
 
 class SmallUnet2(nn.Module):
-    def __init__(self, in_chns, class_num):
+    def __init__(self, in_chns, n_class):
         super(SmallUnet2, self).__init__()
         self.n_channels = in_chns
-        self.n_classes = class_num
+        self.n_classes = n_class
         self.bilinear = True
         self.inc = DoubleConv(self.n_channels, 32)
         self.down1 = Down(32, 64)

@@ -17,7 +17,6 @@ class Augmentations:
     def a_train_transforms_labeled(self):
         return A.Compose(
             [
-                A.LongestMaxSize(self.args.base_size),
                 A.RandomScale(scale_limit=(0.5, 2), p=1),
                 A.RandomCrop(self.args.crop_size, self.args.crop_size),
                 A.HorizontalFlip(p=0.5),
@@ -29,7 +28,6 @@ class Augmentations:
     def a_train_transforms_unlabeled(self):
         return A.Compose(
             [
-                A.LongestMaxSize(self.args.base_size),
                 A.RandomScale(scale_limit=(0.5, 2), p=1),
                 A.RandomCrop(self.args.crop_size, self.args.crop_size),
                 A.HorizontalFlip(p=0.5),
@@ -42,4 +40,4 @@ class Augmentations:
         )
 
     def a_val_transforms(self):
-        return A.Compose([A.LongestMaxSize(self.args.base_size), A.Normalize(self.mean, self.std), ToTensorV2()])
+        return A.Compose([A.Normalize(self.mean, self.std), ToTensorV2()])

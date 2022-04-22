@@ -39,7 +39,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--n-class", type=int, default=None)
     parser.add_argument("--n-channel", type=int, default=None)
     parser.add_argument("--n-workers", type=int, default=8)
-
+    parser.add_argument("--loss", type=str, default="Dice", choices=["CE", "Dice"])
     parser.add_argument("--val-split", type=str, default="val_split_0")
 
     # semi-supervised settings
@@ -80,6 +80,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2, "multiorgan": 14}[args.dataset]
     if args.n_channel is None:
         args.n_channel = {"melanoma": 3, "breastCancer": 1, "pneumothorax": 1, "multiorgan": 1}[args.dataset]
+
     if args.split_file_path is None:
         args.split_file_path = (
             f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
@@ -152,7 +153,6 @@ if __name__ == "__main__":
         # track_grad_norm=True,
         # detect_anomaly=True,
         # overfit_batches=1,
-        # limit_val_batches=0.5
     )
     # define Module based on methods
     module = {

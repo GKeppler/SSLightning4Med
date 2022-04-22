@@ -7,25 +7,27 @@ from torch.optim import SGD
 from torchmetrics import IoU
 
 from SSLightning4Med.models.data_module import SemiDataModule
+from SSLightning4Med.nets.deeplabv3plus import DeepLabV3Plus
 
 # from SSLightning4Med.nets.small_unet import SmallUnet2
 from SSLightning4Med.nets.unet import UNet, UNet_CCT, small_UNet, small_UNet_CCT
-from SSLightning4Med.utils.losses import CE_loss, DiceLoss
+from SSLightning4Med.utils.losses import CELoss, DiceLoss
 from SSLightning4Med.utils.utils import (
+    get_color_map,
     getOneHot,
     meanIOU,
     mulitmetrics,
     wandb_image_mask,
 )
 
-net_zoo = {"unet": (UNet, UNet_CCT), "smallUnet": (small_UNet, small_UNet_CCT)}
+net_zoo = {"DeepLabV3Plus": (DeepLabV3Plus, None), "Unet": (UNet, UNet_CCT), "smallUnet": (small_UNet, small_UNet_CCT)}
 
 
 class BaseModule(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
         parser.add_argument("--lr", type=float, default=0.001)
-        parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="unet")
+        parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
         parser.add_argument("--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised"])
 
         # For St++ Model
@@ -49,15 +51,17 @@ class BaseModule(pl.LightningModule):
             self.net = net_zoo[args.net][1]
         else:
             self.net = net_zoo[args.net][0]
-        self.net = self.net(in_chns=args.n_channel, class_num=args.n_class if args.n_class > 2 else 1)
+        self.net = self.net(in_chns=args.n_channel, n_class=args.n_class if args.n_class > 2 else 1)
 
         # https://discuss.pytorch.org/t/how-to-use-bce-loss-and-crossentropyloss-correctly/89049
-        self.criterion = DiceLoss(self.n_class)  # CE_loss(self.n_class)
-        self.val_criterion = CE_loss(self.n_class)
+        loss = {"Dice": DiceLoss, "CE": CELoss}[args.loss]
+        self.criterion = loss(self.n_class)
+        self.val_criterion = loss(self.n_class)
         self.val_IoU = IoU(
             # ignore_index=0,
             num_classes=self.n_class,
         )
+        self.color_map = get_color_map(args.dataset)
         self.set_metrics()
 
     def set_metrics(self):
@@ -73,9 +77,10 @@ class BaseModule(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
-        pred = self(img)
-        self.val_IoU(self.oneHot(pred), mask)
-        val_loss = self.val_criterion(pred, mask)
+        logits = self(img)
+        val_loss = self.val_criterion(logits, mask)
+        pred = self.oneHot(logits)
+        self.val_IoU(pred, mask)
         self.log("val_loss", val_loss, on_step=False, on_epoch=True)
         self.log("val_mIoU", self.val_IoU, on_step=False, on_epoch=True)
 

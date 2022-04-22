@@ -21,7 +21,7 @@ class SupervisedModule(BaseModule):
         img, mask, _ = batch["labeled"]
         pred = self(img)
         loss = self.criterion(pred, mask)
-        self.log("train_loss", loss, sync_dist=True, on_epoch=True, on_step=True)
+        self.log("train_loss", loss, on_epoch=True, on_step=True)
         return {"loss": loss}
 
     @staticmethod

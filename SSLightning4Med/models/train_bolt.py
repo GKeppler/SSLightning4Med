@@ -36,7 +36,7 @@ class BoltModule(BaseModule):
         pred = self.finetune_layer(features)
 
         loss = self.criterion(pred, mask_batch)
-        self.log("train_loss", loss, sync_dist=True, on_epoch=True, on_step=True)
+        self.log("train_loss", loss, on_epoch=True, on_step=True)
         return {"loss": loss}
 
     @staticmethod
