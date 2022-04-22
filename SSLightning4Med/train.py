@@ -10,7 +10,8 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 import wandb
 from SSLightning4Med.models.base_model import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.models.train_bolt import BoltModule
+
+# from SSLightning4Med.models.train_bolt import BoltModule
 from SSLightning4Med.models.train_CCT import CCTModule
 from SSLightning4Med.models.train_stplusplus import STPlusPlusModule
 from SSLightning4Med.models.train_supervised import SupervisedModule
@@ -54,6 +55,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--save-path", type=str, default=None)
     parser.add_argument("--reliable-id-path", type=str, default=None)
     parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
+    parser.add_argument("--wandb-project", type=str, default="SSLightning4Med")
     # add model specific args
     parser = LightningModule.add_model_specific_args(parser)
     # add all the availabele trainer options to argparse
@@ -132,8 +134,8 @@ if __name__ == "__main__":
     )
     if args.use_wandb:
         # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
-        wandb.init(project="SSLightning4Med", entity="gkeppler")
-        wandb_logger = WandbLogger(project="SSLightning4Med")
+        wandb.init(project=args.wandb_project, entity="gkeppler")
+        wandb_logger = WandbLogger(project=args.wandb_project)
         wandb.config.update(args)
 
     # define Trainer
@@ -141,13 +143,13 @@ if __name__ == "__main__":
     trainer = pl.Trainer.from_argparse_args(
         args,
         fast_dev_run=dev_run,
-        max_epochs=1000,  # args.epochs,
+        max_epochs=args.epochs,
         log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
-        # gpus=[0],
-        # precision=16,
-        accelerator="cpu",
+        gpus=[0],
+        precision=16,
+        # accelerator="cpu",
         # profiler="pytorch",
         # auto_lr_find=True,
         # track_grad_norm=True,
@@ -159,7 +161,7 @@ if __name__ == "__main__":
         "St++": STPlusPlusModule,
         "CCT": CCTModule,
         "Supervised": SupervisedModule,
-        "Bolt": BoltModule,
+        # "Bolt": BoltModule,
     }[args.method]
 
     module.pipeline(dataModule, trainer, checkpoint_callback, args)
