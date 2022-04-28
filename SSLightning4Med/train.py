@@ -63,7 +63,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser = pl.Trainer.add_argparse_args(parser)
     args = parser.parse_args()
     if args.method is None:
-        raise ValueError("no methodname in model_specific_args specified.")
+        raise ValueError("no methodname in model_specific_args specified    .")
     if args.data_root is None:
         args.data_root = {
             "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
@@ -133,6 +133,7 @@ if __name__ == "__main__":
         save_weights_only=True,
     )
     if args.use_wandb:
+        wandb.finish()
         # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
         wandb.init(project=args.wandb_project, entity="gkeppler")
         wandb_logger = WandbLogger(project=args.wandb_project)
@@ -148,7 +149,7 @@ if __name__ == "__main__":
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=[checkpoint_callback],
         gpus=[0],
-        precision=16,
+        # precision=16,
         # accelerator="cpu",
         # profiler="pytorch",
         # auto_lr_find=True,

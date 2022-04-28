@@ -78,13 +78,6 @@ class STPlusPlusModule(BaseModule):
         ]:
             self.checkpoints.append(deepcopy(self.net))
 
-    def validation_step(self, batch: Tuple[Tensor, Tensor, str], batch_idx: int) -> Dict[str, float]:
-        img, mask, id = batch
-        pred = self(img)
-        self.val_IoU(pred, mask)
-        # self.log("val_loss", self.criterion(pred, mask), on_epoch=True)
-        self.log("val_mIoU", self.val_IoU, on_step=False, on_epoch=True)
-
     def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
         mIOU = self.val_IoU.compute()
         if mIOU > self.previous_best:
@@ -163,7 +156,7 @@ class STPlusPlusModule(BaseModule):
 
         if not args.plus:
             # <============================= Pseudolabel all unlabeled images =============================>
-
+            trainer.model.eval()
             trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
             # <======================== Re-training on labeled and unlabeled images ========================>
