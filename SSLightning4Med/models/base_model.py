@@ -79,15 +79,15 @@ class BaseModule(pl.LightningModule):
         img, mask, id = batch
         logits = self(img)
         val_loss = self.val_criterion(logits, mask)
-        pred = self.oneHot(logits)
-        self.val_IoU(pred, mask)
         self.log("val_loss", val_loss, on_step=False, on_epoch=True)
+        pred = self.oneHot(logits)
+        self.val_IoU(pred.to(device=self.device), mask)
         self.log("val_mIoU", self.val_IoU, on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
         pred = self.net(img)
-        pred = self.oneHot(pred.cpu())
+        pred = self.oneHot(pred).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
         return wandb_image_mask(img, mask, pred, self.n_class)
 

@@ -73,7 +73,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         }[args.dataset]
 
     if args.epochs is None:
-        args.epochs = {"melanoma": 80}[args.dataset]
+        args.epochs = 100
     if args.crop_size is None:
         args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256, "multiorgan": 256}[args.dataset]
     if args.base_size is None:
@@ -90,11 +90,11 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.test_file_path is None:
         args.test_file_path = f"SSLightning4Med/data/splits/{args.dataset}/test.yaml"
     if args.pseudo_mask_path is None:
-        args.pseudo_mask_path = f"data/pseudo_masks/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
+        args.pseudo_mask_path = f"{args.data_root}/pseudo_masks/{args.method}/{args.split}/split_{args.shuffle}"
     if args.save_path is None:
-        args.save_path = f"models/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
+        args.save_path = f"{args.data_root}/{args.method}/{args.split}/split_{args.shuffle}"
     if args.reliable_id_path is None:
-        args.reliable_id_path = f"data/reliable_ids/{args.method}/{args.dataset}/{args.split}/split_{args.shuffle}"
+        args.reliable_id_path = f"{args.data_root}/reliable_ids/{args.method}/{args.split}/split_{args.shuffle}"
 
     if not os.path.exists(args.save_path):
         os.makedirs(args.save_path)

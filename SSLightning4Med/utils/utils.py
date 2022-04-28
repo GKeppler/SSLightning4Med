@@ -65,7 +65,7 @@ class mulitmetrics:
     def _fast_hist(self, label_pred: ndarray, label_true: ndarray) -> ndarray:
         mask = (label_true >= 0) & (label_true < self.num_classes)
         hist = np.bincount(
-            self.num_classes * label_true[mask].astype(int) + label_pred[mask],
+            self.num_classes * label_true[mask].astype(int) + label_pred[mask].astype(int),
             minlength=self.num_classes ** 2,
         ).reshape(self.num_classes, self.num_classes)
         return hist
@@ -107,6 +107,8 @@ class mulitmetrics:
 
 
 class getOneHot:
+    """Returns a one hot mask of the prediction."""
+
     def __init__(self, num_classes: int) -> None:
         self.num_classes = num_classes
         self.threshold = tensor([0.5])
