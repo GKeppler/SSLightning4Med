@@ -63,7 +63,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser = pl.Trainer.add_argparse_args(parser)
     args = parser.parse_args()
     if args.method is None:
-        raise ValueError("no methodname in model_specific_args.")
+        raise ValueError("no methodname in model_specific_args specified.")
     if args.data_root is None:
         args.data_root = {
             "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
