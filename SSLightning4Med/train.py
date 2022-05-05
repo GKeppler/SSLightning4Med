@@ -13,6 +13,7 @@ from SSLightning4Med.models.data_module import SemiDataModule
 
 # from SSLightning4Med.models.train_bolt import BoltModule
 from SSLightning4Med.models.train_CCT import CCTModule
+from SSLightning4Med.models.train_mean_teacher import MeanTeacherModule
 from SSLightning4Med.models.train_stplusplus import STPlusPlusModule
 from SSLightning4Med.models.train_supervised import SupervisedModule
 from SSLightning4Med.utils.augmentations import Augmentations
@@ -162,6 +163,7 @@ if __name__ == "__main__":
         "St++": STPlusPlusModule,
         "CCT": CCTModule,
         "Supervised": SupervisedModule,
+        "MeanTeacher": MeanTeacherModule,
         # "Bolt": BoltModule,
     }[args.method]
 

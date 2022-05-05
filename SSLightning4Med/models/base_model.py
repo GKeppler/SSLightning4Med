@@ -28,7 +28,9 @@ class BaseModule(pl.LightningModule):
     def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
         parser.add_argument("--lr", type=float, default=0.001)
         parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
-        parser.add_argument("--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised"])
+        parser.add_argument(
+            "--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher"]
+        )
 
         # For St++ Model
         parser.add_argument(

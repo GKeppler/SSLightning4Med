@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Tuple
 
 import pytorch_lightning as pl
 import torch
+import torch.nn.functional as F
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 from torch.optim import SGD
@@ -9,6 +10,14 @@ from torch.optim import SGD
 from SSLightning4Med.models.base_model import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.utils.utils import sigmoid_rampup, wandb_image_mask
+
+
+def consistency_loss(logits_w1, logits_w2):
+    assert logits_w1.size() == logits_w2.size()
+    if logits_w1.shape[1] == 1:
+        return F.mse_loss(torch.sigmoid(logits_w1), torch.sigmoid(logits_w2))
+    else:
+        return F.mse_loss(torch.softmax(logits_w1, dim=-1), torch.softmax(logits_w2, dim=-1), reduction="mean")
 
 
 class CCTModule(BaseModule):
@@ -29,10 +38,10 @@ class CCTModule(BaseModule):
         image_batch, label_batch, _ = batch_supervised
 
         outputs, outputs_aux1, outputs_aux2, outputs_aux3 = self.net(image_batch)
-        outputs_soft = torch.softmax(outputs, dim=1)
-        outputs_aux1_soft = torch.softmax(outputs_aux1, dim=1)
-        outputs_aux2_soft = torch.softmax(outputs_aux2, dim=1)
-        outputs_aux3_soft = torch.softmax(outputs_aux3, dim=1)
+        # outputs_soft = torch.softmax(outputs, dim=1)
+        # outputs_aux1_soft = torch.softmax(outputs_aux1, dim=1)
+        # outputs_aux2_soft = torch.softmax(outputs_aux2, dim=1)
+        # outputs_aux3_soft = torch.softmax(outputs_aux3, dim=1)
         # calc losses for labeled batch
         label_batch = label_batch.long()
         loss_ce = self.criterion(outputs, label_batch)
@@ -48,12 +57,15 @@ class CCTModule(BaseModule):
         # warmup unsup loss to avoid inital noise
         consistency_weight = self.consistency * sigmoid_rampup(self.current_epoch)
 
-        consistency_loss_aux1 = torch.mean((outputs_soft - outputs_aux1_soft) ** 2)
-        consistency_loss_aux2 = torch.mean((outputs_soft - outputs_aux2_soft) ** 2)
-        consistency_loss_aux3 = torch.mean((outputs_soft - outputs_aux3_soft) ** 2)
+        # consistency_loss_aux1 = torch.mean((outputs_soft - outputs_aux1_soft) ** 2)
+        # consistency_loss_aux2 = torch.mean((outputs_soft - outputs_aux2_soft) ** 2)
+        # consistency_loss_aux3 = torch.mean((outputs_soft - outputs_aux3_soft) ** 2)
+        consistency_loss_aux1 = consistency_loss(outputs, outputs_aux1)
+        consistency_loss_aux2 = consistency_loss(outputs, outputs_aux2)
+        consistency_loss_aux3 = consistency_loss(outputs, outputs_aux3)
 
-        consistency_loss = (consistency_loss_aux1 + consistency_loss_aux2 + consistency_loss_aux3) / 3
-        loss = supervised_loss + consistency_loss * consistency_weight
+        unsupervised_loss = (consistency_loss_aux1 + consistency_loss_aux2 + consistency_loss_aux3) / 3
+        loss = supervised_loss + unsupervised_loss * consistency_weight
         return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):  # type: ignore
