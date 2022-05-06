@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any, Dict, Tuple
 
 import pytorch_lightning as pl
@@ -5,7 +6,7 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 
-from SSLightning4Med.models.base_model import BaseModule, net_zoo
+from SSLightning4Med.models.base_model import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.models.train_CCT import consistency_loss
 from SSLightning4Med.utils.utils import sigmoid_rampup
@@ -22,8 +23,7 @@ class MeanTeacherModule(BaseModule):
     def __init__(self, args: Any) -> None:
         super(MeanTeacherModule, self).__init__(args)
         self.consistency = 0.1
-        self.net_ema = net_zoo[args.net][0]
-        self.net_ema = self.net_ema(in_chns=args.n_channel, n_class=args.n_class if args.n_class > 2 else 1)
+        self.net_ema = deepcopy(self.net)
         for param in self.net_ema.parameters():
             param.detach_()
 
