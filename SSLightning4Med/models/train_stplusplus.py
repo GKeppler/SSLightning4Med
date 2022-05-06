@@ -11,7 +11,7 @@ import yaml
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 
-from SSLightning4Med.models.base_model import BaseModule
+from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.utils.utils import get_color_map, meanIOU
 

@@ -29,7 +29,7 @@ class BaseModule(pl.LightningModule):
         parser.add_argument("--lr", type=float, default=0.001)
         parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
         parser.add_argument(
-            "--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher"]
+            "--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher", "FixMatch"]
         )
 
         # For St++ Model

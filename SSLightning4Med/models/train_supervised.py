@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 
-from SSLightning4Med.models.base_model import BaseModule
+from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 
 
@@ -13,15 +13,12 @@ class SupervisedModule(BaseModule):
         super(SupervisedModule, self).__init__(args)
         self.args = args
 
-    def forward(self, x: Tensor) -> Tensor:
-        x = self.net(x)
-        return x
-
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         img, mask, _ = batch["labeled"]
-        pred = self(img)
+        pred = self.net(img)
         loss = self.criterion(pred, mask)
         self.log("train_loss", loss, on_epoch=True, on_step=True)
+        self.log("supervised_loss", loss, on_epoch=True, on_step=True)
         return {"loss": loss}
 
     @staticmethod

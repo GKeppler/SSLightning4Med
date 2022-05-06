@@ -4,9 +4,9 @@ from typing import Any, Dict, Tuple
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
-from torch import Tensor
+from torch import Tensor, nn
 
-from SSLightning4Med.models.base_model import BaseModule
+from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.models.train_CCT import consistency_loss
 from SSLightning4Med.utils.utils import sigmoid_rampup
@@ -19,10 +19,41 @@ def update_ema_variables(model, ema_model, alpha, global_step):
         ema_param.data.mul_(alpha).add_(1 - alpha, param.data)
 
 
+class Bn_Controller:
+    """update BatchNorm only for labeled data if
+    labeled data and unlabeled data are forwarded separatel.
+    Record the BatchNorm statistics before the forward propagation of unlabeled data and
+    restore them after the propagation is done.
+    """
+
+    def __init__(self):
+        """
+        freeze_bn and unfreeze_bn must appear in pairs
+        """
+        self.backup = {}
+
+    def freeze_bn(self, model):
+        assert self.backup == {}
+        for name, m in model.named_modules():
+            if isinstance(m, nn.SyncBatchNorm) or isinstance(m, nn.BatchNorm2d):
+                self.backup[name + ".running_mean"] = m.running_mean.data.clone()
+                self.backup[name + ".running_var"] = m.running_var.data.clone()
+                self.backup[name + ".num_batches_tracked"] = m.num_batches_tracked.data.clone()
+
+    def unfreeze_bn(self, model):
+        for name, m in model.named_modules():
+            if isinstance(m, nn.SyncBatchNorm) or isinstance(m, nn.BatchNorm2d):
+                m.running_mean.data = self.backup[name + ".running_mean"]
+                m.running_var.data = self.backup[name + ".running_var"]
+                m.num_batches_tracked.data = self.backup[name + ".num_batches_tracked"]
+        self.backup = {}
+
+
 class MeanTeacherModule(BaseModule):
     def __init__(self, args: Any) -> None:
         super(MeanTeacherModule, self).__init__(args)
         self.consistency = 0.1
+        self.bn_controller = Bn_Controller()
         self.net_ema = deepcopy(self.net)
         for param in self.net_ema.parameters():
             param.detach_()
@@ -36,14 +67,15 @@ class MeanTeacherModule(BaseModule):
         # unsupervised
         batch_unusupervised = batch["unlabeled"]
         unlabeled_image_batch, _, _ = batch_unusupervised
-        noise = torch.clamp(torch.randn_like(unlabeled_image_batch) * 0.1, -0.2, 0.2)
-        ema_inputs = unlabeled_image_batch + noise
-        with torch.no_grad():
-            ema_output = self.net_ema(ema_inputs)
-            # ema_output_soft = torch.softmax(ema_output, dim=1)
 
+        with torch.no_grad():
+            self.bn_controller.freeze_bn(self.net_ema)
+            ema_output = self.net_ema(unlabeled_image_batch)
+            self.bn_controller.unfreeze_bn(self.net_ema)
+
+        self.bn_controller.freeze_bn(self.net)
         outputs_unsup = self.net(unlabeled_image_batch)
-        # outputs_unsup_soft = torch.softmax(outputs_unsup, dim=1)
+        self.bn_controller.unfreeze_bn(self.net)
 
         consistency_weight = self.consistency * sigmoid_rampup(self.current_epoch)
         if self.global_step < 1000:

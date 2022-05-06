@@ -31,7 +31,7 @@ class SemiDataModule(pl.LightningDataModule):
         self.split_yaml_path = split_yaml_path
         self.test_yaml_path = test_yaml_path
         self.pseudo_mask_path = pseudo_mask_path
-        self.unlabeled_batch_size = batch_size // 2 if unlabeled_batch_size is None else unlabeled_batch_size
+        self.unlabeled_batch_size = batch_size if unlabeled_batch_size is None else unlabeled_batch_size
         self.color_map = color_map
         self.mode = mode
         self.num_workers = num_workers
@@ -65,7 +65,7 @@ class SemiDataModule(pl.LightningDataModule):
         elif self.mode == "pseudo_train":
             loader_labeled = DataLoader(
                 dataset_labeled,
-                batch_size=self.batch_size // 2,
+                batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 pin_memory=True,
             )
@@ -94,7 +94,7 @@ class SemiDataModule(pl.LightningDataModule):
         elif self.mode == "semi_train":
             loader_labeled = DataLoader(
                 dataset_labeled,
-                batch_size=self.batch_size // 2,
+                batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 pin_memory=True,
             )
@@ -114,6 +114,49 @@ class SemiDataModule(pl.LightningDataModule):
             combined_loaders = CombinedLoader(
                 {
                     "unlabeled": loader_unlabeled,
+                    "labeled": loader_labeled,
+                },
+                "max_size_cycle",
+            )
+            return combined_loaders
+        elif self.mode == "fixmatch_train":
+            loader_labeled = DataLoader(
+                dataset_labeled,
+                batch_size=self.batch_size,
+                num_workers=self.num_workers,
+                pin_memory=True,
+            )
+            # unsupervised
+            unlabeled_dataset_wa = BaseDataset(
+                root_dir=self.root_dir,
+                id_list=self.train_id_dict["unlabeled"],
+                transform=transforms,
+                color_map=self.color_map,
+            )
+            loader_unlabeled_wa = DataLoader(
+                unlabeled_dataset_wa,
+                batch_size=self.unlabeled_batch_size,
+                num_workers=self.num_workers,
+                pin_memory=True,
+                shuffle=False,
+            )
+            unlabeled_dataset_sa = BaseDataset(
+                root_dir=self.root_dir,
+                id_list=self.train_id_dict["unlabeled"],
+                transform=transforms_unlabeled,
+                color_map=self.color_map,
+            )
+            loader_unlabeled_sa = DataLoader(
+                unlabeled_dataset_sa,
+                batch_size=self.unlabeled_batch_size,
+                num_workers=self.num_workers,
+                pin_memory=True,
+                shuffle=False,
+            )
+            combined_loaders = CombinedLoader(
+                {
+                    "unlabeled_wa": loader_unlabeled_wa,
+                    "unlabeled_sa": loader_unlabeled_sa,
                     "labeled": loader_labeled,
                 },
                 "max_size_cycle",

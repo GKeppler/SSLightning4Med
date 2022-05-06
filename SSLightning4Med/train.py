@@ -8,11 +8,12 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 import wandb
-from SSLightning4Med.models.base_model import BaseModule
+from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 
 # from SSLightning4Med.models.train_bolt import BoltModule
 from SSLightning4Med.models.train_CCT import CCTModule
+from SSLightning4Med.models.train_fixmatch import FixmatchModule
 from SSLightning4Med.models.train_mean_teacher import MeanTeacherModule
 from SSLightning4Med.models.train_stplusplus import STPlusPlusModule
 from SSLightning4Med.models.train_supervised import SupervisedModule
@@ -123,8 +124,12 @@ if __name__ == "__main__":
     )
 
     dataModule.val_transforms = augs.a_val_transforms()
-    dataModule.train_transforms = augs.a_train_transforms_labeled()
-    dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
+    dataModule.train_transforms = augs.a_train_transforms_weak()
+    dataModule.train_transforms_unlabeled = (
+        augs.a_train_transforms_strong()
+        if args.method == "St++" or args.method == "Fixmatch"
+        else augs.a_train_transforms_weak()
+    )
 
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
@@ -164,6 +169,7 @@ if __name__ == "__main__":
         "CCT": CCTModule,
         "Supervised": SupervisedModule,
         "MeanTeacher": MeanTeacherModule,
+        "FixMatch": FixmatchModule,
         # "Bolt": BoltModule,
     }[args.method]
 

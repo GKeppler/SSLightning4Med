@@ -6,7 +6,7 @@ from pl_bolts.models.self_supervised import SwAV
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 
-from SSLightning4Med.models.base_model import BaseModule
+from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.deeplabv3plus import DeepLabV3Plus
 

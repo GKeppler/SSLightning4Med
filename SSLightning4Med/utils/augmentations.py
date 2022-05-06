@@ -14,7 +14,7 @@ class Augmentations:
             "multiorgan": (0.1935, 0.1889),
         }[args.dataset]
 
-    def a_train_transforms_labeled(self):
+    def a_train_transforms_weak(self):
         return A.Compose(
             [
                 A.RandomScale(scale_limit=(0.5, 2), p=1),
@@ -25,7 +25,7 @@ class Augmentations:
             ]
         )
 
-    def a_train_transforms_unlabeled(self):
+    def a_train_transforms_strong(self):
         return A.Compose(
             [
                 A.RandomScale(scale_limit=(0.5, 2), p=1),
