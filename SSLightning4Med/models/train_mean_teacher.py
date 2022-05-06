@@ -12,6 +12,7 @@ from SSLightning4Med.models.train_CCT import consistency_loss
 from SSLightning4Med.utils.utils import sigmoid_rampup
 
 
+# old
 def update_ema_variables(model, ema_model, alpha, global_step):
     for ema_param, param in zip(ema_model.parameters(), model.parameters()):
         if param.requires_grad:
