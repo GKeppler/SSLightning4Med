@@ -52,6 +52,8 @@ class MeanTeacherModule(BaseModule):
             unsupervised_loss = consistency_loss(outputs_unsup, ema_output)
 
         loss = supervised_loss + consistency_weight * unsupervised_loss
+        self.log("supervised_loss", supervised_loss, on_epoch=True, on_step=True)
+        self.log("unsupervised_loss", unsupervised_loss, on_epoch=True, on_step=True)
         self.log("train_loss", loss, on_epoch=True, on_step=True)
         return {"loss": loss}
 
