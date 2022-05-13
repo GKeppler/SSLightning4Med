@@ -1,4 +1,5 @@
 import os
+import traceback
 from argparse import ArgumentParser
 from typing import Any
 
@@ -105,7 +106,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     return args
 
 
-if __name__ == "__main__":
+def main():
     args = base_parse_args(BaseModule)
     seed_everything(123, workers=True)
 
@@ -174,3 +175,14 @@ if __name__ == "__main__":
     }[args.method]
 
     module.pipeline(dataModule, trainer, checkpoint_callback, args)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        # exit gracefully, so wandb logs the problem
+        print(traceback.print_exc(), e)
+        exit(1)
+    finally:
+        wandb.finish()

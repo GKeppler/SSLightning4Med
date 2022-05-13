@@ -96,3 +96,5 @@ wandb/*
 
 monkeytype.sqlite3
 *.ckpt
+test2_methods.pdf
+test2_metrics.pdf

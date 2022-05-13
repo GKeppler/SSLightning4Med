@@ -13,8 +13,8 @@ import wandb
 
 #%%
 # Project is specified by <entity/project-name>
-project_name = "SSLightning4Med"
-sweep_id = "4z01dfmb"
+project_name = "test2"
+sweep_id = "a8rmnwds"
 filters = {
     "state": "finished",
     "sweep": sweep_id,
@@ -123,8 +123,31 @@ matplotlib.rcParams["font.family"] = "STIXGeneral"
 fig, ax = plt.subplots()
 for col in columns_table:
     metrics_df[col].reset_index().plot("split", "mean", yerr="std", label=col[5:], ax=ax)
-plt.savefig(f"{project_name}.pdf", transparent=False, bbox_inches="tight")
+plt.savefig(f"{project_name}_metrics.pdf", transparent=False, bbox_inches="tight")
 # %%
 # save plot and metrics
 # metrics_df.to_csv(f"{project_name}.csv")
+# %%
+
+#%%
+# methods comparison
+columns = [
+    "split",
+    "method",
+    "test mIOU",
+]
+method_df = all_df[columns].groupby(["method", "split"]).agg([np.mean, np.std, np.count_nonzero])
+method_df.dropna(axis=0, how="all", inplace=True)
+columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
+method_df.head()
+
+#%%
+fig, ax = plt.subplots()
+for label, group in method_df.reset_index().groupby("method"):
+    group.columns = ["".join(col) for col in group.columns]
+    # replace Na with 0
+    group["test mIOUstd"].replace(np.NaN, 0, inplace=True)
+    group["order"] = group["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]))
+    group.sort_values(by="order").plot("split", "test mIOUmean", yerr="test mIOUstd", label=label, ax=ax)
+plt.savefig(f"{project_name}_methods.pdf", transparent=False, bbox_inches="tight")
 # %%

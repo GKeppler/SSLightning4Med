@@ -8,6 +8,7 @@ from torchmetrics import IoU
 
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.deeplabv3plus import DeepLabV3Plus
+from SSLightning4Med.nets.seg_former import SegFormer
 
 # from SSLightning4Med.nets.small_unet import SmallUnet2
 from SSLightning4Med.nets.unet import UNet, UNet_CCT, small_UNet, small_UNet_CCT
@@ -20,7 +21,12 @@ from SSLightning4Med.utils.utils import (
     wandb_image_mask,
 )
 
-net_zoo = {"DeepLabV3Plus": (DeepLabV3Plus, None), "Unet": (UNet, UNet_CCT), "smallUnet": (small_UNet, small_UNet_CCT)}
+net_zoo = {
+    "DeepLabV3Plus": (DeepLabV3Plus, None),
+    "Unet": (UNet, UNet_CCT),
+    "smallUnet": (small_UNet, small_UNet_CCT),
+    "SegFormer": (SegFormer, None),
+}
 
 
 class BaseModule(pl.LightningModule):
