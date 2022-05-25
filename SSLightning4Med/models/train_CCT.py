@@ -1,15 +1,14 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
-from torch.optim import SGD
 
 from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils.utils import sigmoid_rampup, wandb_image_mask
+from SSLightning4Med.utils.utils import consistency_weight, wandb_image_mask
 
 
 def consistency_loss(logits_w1, logits_w2):
@@ -28,7 +27,8 @@ class CCTModule(BaseModule):
 
     def __init__(self, args: Any):
         super(CCTModule, self).__init__(args)
-        self.consistency = 0.1
+        self.ramp_up = 0.1  # from CCT paper
+        self.cons_w_unsup = consistency_weight(final_w=30, rampup_ends=self.ramp_up * self.epochs)  # from CCT paper
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         batch_unusupervised = batch["unlabeled"]
@@ -57,8 +57,7 @@ class CCTModule(BaseModule):
 
         unsupervised_loss = (consistency_loss_aux1 + consistency_loss_aux2 + consistency_loss_aux3) / 3
         # warmup unsup loss to avoid inital noise
-        consistency_weight = self.consistency * sigmoid_rampup(self.current_epoch)
-        loss = supervised_loss + unsupervised_loss * consistency_weight
+        loss = supervised_loss + unsupervised_loss * self.cons_w_unsup(self.current_epoch)
         self.log("supervised_loss", supervised_loss, on_epoch=True, on_step=True)
         self.log("unsupervised_loss", unsupervised_loss, on_epoch=True, on_step=True)
         self.log("train_loss", loss, on_epoch=True, on_step=True)
@@ -66,8 +65,11 @@ class CCTModule(BaseModule):
 
     def validation_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
-        pred = self(img)[0]
-        self.val_IoU(pred, mask)
+        logits = self(img)[0]
+        val_loss = self.val_criterion(logits, mask)
+        self.log("val_loss", val_loss, on_step=False, on_epoch=True)
+        pred = self.oneHot(logits)
+        self.val_IoU(pred.to(device=self.device), mask)
         self.log("val_mIoU", self.val_IoU, on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_idx):  # type: ignore
@@ -76,10 +78,6 @@ class CCTModule(BaseModule):
         pred = self.oneHot(pred).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
         return wandb_image_mask(img, mask, pred, self.n_class)
-
-    def configure_optimizers(self) -> List:
-        optimizer = SGD(self.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
-        return [optimizer]
 
     @staticmethod
     def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:

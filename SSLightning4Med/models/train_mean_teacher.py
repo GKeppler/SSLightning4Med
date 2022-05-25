@@ -9,7 +9,7 @@ from torch import Tensor, nn
 from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.models.train_CCT import consistency_loss
-from SSLightning4Med.utils.utils import sigmoid_rampup
+from SSLightning4Med.utils.utils import consistency_weight
 
 
 def update_ema_variables(model, ema_model, alpha, global_step):
@@ -57,6 +57,7 @@ class MeanTeacherModule(BaseModule):
         self.net_ema = deepcopy(self.net)
         for param in self.net_ema.parameters():
             param.detach_()
+        self.cons_w_unsup = consistency_weight(final_w=30, rampup_ends=self.ramp_up * self.epochs)  # from CCT paper
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         # supervised
@@ -77,13 +78,12 @@ class MeanTeacherModule(BaseModule):
         outputs_unsup = self.net(unlabeled_image_batch)
         self.bn_controller.unfreeze_bn(self.net)
 
-        consistency_weight = self.consistency * sigmoid_rampup(self.current_epoch)
-        if self.global_step < 1000:
+        if self.global_step < 100:
             unsupervised_loss = 0.0
         else:
             unsupervised_loss = consistency_loss(outputs_unsup, ema_output)
 
-        loss = supervised_loss + consistency_weight * unsupervised_loss
+        loss = supervised_loss + unsupervised_loss * self.cons_w_unsup(self.current_epoch)
         self.log("supervised_loss", supervised_loss, on_epoch=True, on_step=True)
         self.log("unsupervised_loss", unsupervised_loss, on_epoch=True, on_step=True)
         self.log("train_loss", loss, on_epoch=True, on_step=True)

@@ -8,14 +8,18 @@ from torch import Tensor
 
 from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils.utils import sigmoid_rampup
+from SSLightning4Med.utils.utils import consistency_weight
 
 
 class FixmatchModule(BaseModule):
     def __init__(self, args: Any) -> None:
         super(FixmatchModule, self).__init__(args)
         self.args = args
-        self.consistency = 0.1
+        self.ramp_up = 0.1  # from CCT paper
+        self.cons_w_unsup = consistency_weight(
+            final_w=1, rampup_ends=self.ramp_up * self.epochs  # from Fixmatch paper
+        )
+        self.threshold = 0.95
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         # supervised
@@ -24,12 +28,12 @@ class FixmatchModule(BaseModule):
         outputs = self.net(labeled_image_batch)
         supervised_loss = self.criterion(outputs, label_batch)
         # unsupervised
+        # in the fixmach paper unsupervised batch size is recommended 7x to supervised batch size
         batch_unusupervised_wa = batch["unlabeled_wa"]
         unlabeled_image_batch_wa, _, id_wa = batch_unusupervised_wa
         batch_unusupervised_sa = batch["unlabeled_sa"]
         unlabeled_image_batch_sa, _, id_sa = batch_unusupervised_sa
         assert id_sa == id_wa
-        threshold = 0.95
 
         output_wa = self.net(unlabeled_image_batch_wa)
         output_sa = self.net(unlabeled_image_batch_sa)
@@ -39,12 +43,11 @@ class FixmatchModule(BaseModule):
         )
         max_probs, targets_u = torch.max(pseudo_label, dim=1)
 
-        mask = max_probs.ge(threshold).float()
+        mask = max_probs.ge(self.threshold).float()
 
         unsupervised_loss = (F.cross_entropy(output_sa, targets_u, reduction="none") * mask).mean()
         # warmup unsup loss to avoid inital noise
-        consistency_weight = self.consistency * sigmoid_rampup(self.current_epoch)
-        loss = supervised_loss + unsupervised_loss * consistency_weight
+        loss = supervised_loss + unsupervised_loss * self.cons_w_unsup(self.current_epoch)
         self.log("supervised_loss", supervised_loss, on_epoch=True, on_step=True)
         self.log("unsupervised_loss", unsupervised_loss, on_epoch=True, on_step=True)
         self.log("train_loss", loss, on_epoch=True, on_step=True)

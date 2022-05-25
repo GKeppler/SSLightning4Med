@@ -35,7 +35,8 @@ class BaseModule(pl.LightningModule):
         """
         A rule of thumb here is to double the learning rate as you double the batch size.
         """
-        parser.add_argument("--lr", type=float, default=0.001)
+        parser.add_argument("--lr", type=float, default=0.1)
+        parser.add_argument("--optimizer", type=str, default="SGD", choices=["SGD", "AdamWOneCycle", "Adam"])
         parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
         parser.add_argument(
             "--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher", "FixMatch"]
@@ -124,36 +125,42 @@ class BaseModule(pl.LightningModule):
         self.test_metrics = mulitmetrics(num_classes=self.n_class)
 
     def configure_optimizers(self) -> List:
-        optimizer = optim.SGD(
-            self.parameters(),
-            lr=self.lr,
-            momentum=0.9,
-            weight_decay=1e-4,
-        )
-        return [optimizer]
+        if self.args.optimizer == "SGD":
+            optimizer = optim.SGD(
+                self.parameters(),
+                lr=self.lr,
+                momentum=0.9,
+                weight_decay=1e-4,
+            )
+            return [optimizer]
+        elif self.args.optimizer == "Adam":
+            """
+            loss collapses on hippocampus dataset
+            """
+            optimizer = optim.Adam(self.parameters(), lr=self.lr)
+            return [optimizer]
 
-    def configure_optimizers2(self):
-        """
-        Super-Convergence: Very Fast Training of Neural Networks Using Large Learning Rates
-        """
-        optimizer = optim.AdamW(self.parameters(), lr=self.lr)
-        lr_scheduler = {
-            "scheduler": optim.lr_scheduler.OneCycleLR(
-                optimizer,
-                max_lr=self.lr,
-                steps_per_epoch=sum(
-                    [len(v) for k, v in self.trainer.datamodule.train_dataloader().items()]
-                ),  # len(self.trainer.datamodule.train_dataloader()["labeled"]),
-                epochs=self.epochs,
-                anneal_strategy="linear",
-                final_div_factor=30,
-            ),
-            "name": "learning_rate",
-            "interval": "step",
-            "frequency": 1,
-        }
-
-        return [optimizer], [lr_scheduler]
+        elif self.args.optimizer == "AdamWOneCycle":
+            """
+            Super-Convergence: Very Fast Training of Neural Networks Using Large Learning Rates
+            """
+            optimizer = optim.AdamW(self.parameters(), lr=self.lr)
+            lr_scheduler = {
+                "scheduler": optim.lr_scheduler.OneCycleLR(
+                    optimizer,
+                    max_lr=self.lr,
+                    steps_per_epoch=sum(
+                        [len(v) for k, v in self.trainer.datamodule.train_dataloader().items()]
+                    ),  # len(self.trainer.datamodule.train_dataloader()["labeled"]),
+                    epochs=self.epochs,
+                    anneal_strategy="linear",
+                    final_div_factor=30,
+                ),
+                "name": "learning_rate",
+                "interval": "step",
+                "frequency": 1,
+            }
+            return [optimizer], [lr_scheduler]
 
     @staticmethod
     def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:

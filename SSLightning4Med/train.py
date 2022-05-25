@@ -36,7 +36,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         type=str,
         default=None,
     )
-    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--crop-size", type=int, default=None)
     parser.add_argument("--base-size", type=int, default=None)
