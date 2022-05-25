@@ -2,10 +2,11 @@
 ImageNet: mean = [0.485, 0.456, 0.406] and                      std = [0.229, 0.224, 0.225]
 
 melanoma        mean:  tensor([0.7116, 0.5834, 0.5337]) std:  tensor([0.1471, 0.1646, 0.1795])
-pneumothorax    mean:  tensor([0.5380, 0.5380, 0.5380]) std:  tensor([0.2641, 0.2641, 0.2641])
-breastCancer    mean:  tensor([0.3298, 0.3298, 0.3298]) std:  tensor([0.2218, 0.2218, 0.2218])
-multiorgan      mean:  tensor([0.1935, 0.1935, 0.1935]) std:  tensor([0.1889, 0.1889, 0.1889])
-
+pneumothorax    mean:  tensor([0.5380])                 std:  tensor([0.2641])
+breastCancer    mean:  tensor([0.3298])                 std:  tensor([0.2218])
+multiorgan      mean:  tensor([0.1935])                 std:  tensor([0.1889])
+brats           mean:  tensor([0.0775])                 std:  tensor([0.1539])
+hippocampus     mean:  tensor([0.2758])                 std:  tensor([0.1628])
 """
 import albumentations as A
 import torch
@@ -21,13 +22,23 @@ from SSLightning4Med.utils.utils import get_color_map
 # from https://discuss.pytorch.org/t/computing-the-mean-and-std-of-dataset/34949/17
 if __name__ == "__main__":
     args = base_parse_args(CCTModule)
-    a_train_transforms = A.Compose(
-        [
-            # scale from 0 .. 255 to 0 .. 1
-            A.Normalize(mean=(0, 0, 0), std=(1, 1, 1)),
-            ToTensorV2(),
-        ]
-    )
+
+    if args.n_channel == 3:
+        a_train_transforms = A.Compose(
+            [
+                # scale from 0 .. 255 to 0 .. 1
+                A.Normalize(mean=(0, 0, 0), std=(1, 1, 1)),
+                ToTensorV2(),
+            ]
+        )
+    elif args.n_channel == 1:
+        a_train_transforms = A.Compose(
+            [
+                # scale from 0 .. 255 to 0 .. 1
+                A.Normalize(mean=(0), std=(1)),
+                ToTensorV2(),
+            ]
+        )
     # standard dataloader -> uses labeled
 
     with open(args.split_file_path, "r") as file:
@@ -40,7 +51,7 @@ if __name__ == "__main__":
         transform=a_train_transforms,
         color_map=get_color_map(args.dataset),
     )
-    loader = DataLoader(full_dataset, batch_size=64, shuffle=False, num_workers=4, pin_memory=True)
+    loader = DataLoader(full_dataset, batch_size=1, shuffle=False, num_workers=4, pin_memory=True)
 
     channels_sum, channels_squared_sum, num_batches = 0, 0, 0
     for data, _, _ in loader:

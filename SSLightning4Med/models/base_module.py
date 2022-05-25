@@ -3,7 +3,7 @@ from typing import List
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from torch.optim import SGD
+from torch import optim
 from torchmetrics import IoU
 
 from SSLightning4Med.models.data_module import SemiDataModule
@@ -32,6 +32,9 @@ net_zoo = {
 class BaseModule(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
+        """
+        A rule of thumb here is to double the learning rate as you double the batch size.
+        """
         parser.add_argument("--lr", type=float, default=0.001)
         parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
         parser.add_argument(
@@ -52,8 +55,10 @@ class BaseModule(pl.LightningModule):
         super(BaseModule, self).__init__()
         self.previous_best = 0.0
         self.lr = args.lr
+        self.epochs = args.epochs
         self.n_class = args.n_class
         self.use_wandb = args.use_wandb
+        self.args = args
         self.oneHot = getOneHot(args.n_class)
         if args.method == "CCT":
             self.net = net_zoo[args.net][1]
@@ -79,6 +84,9 @@ class BaseModule(pl.LightningModule):
 
     def forward(self, x):  # type: ignore
         return self.net(x)
+
+    def on_train_start(self):
+        self.logger.log_hyperparams(self.args),
 
     def training_step(self, batch, batch_idx):  # type: ignore
         raise NotImplementedError
@@ -116,14 +124,36 @@ class BaseModule(pl.LightningModule):
         self.test_metrics = mulitmetrics(num_classes=self.n_class)
 
     def configure_optimizers(self) -> List:
-        optimizer = SGD(
+        optimizer = optim.SGD(
             self.parameters(),
             lr=self.lr,
             momentum=0.9,
             weight_decay=1e-4,
         )
-        # scheduler = torch.optim.ReduceLROnPlateau(optimizer, mode='min')
-        return [optimizer]  # , [scheduler]
+        return [optimizer]
+
+    def configure_optimizers2(self):
+        """
+        Super-Convergence: Very Fast Training of Neural Networks Using Large Learning Rates
+        """
+        optimizer = optim.AdamW(self.parameters(), lr=self.lr)
+        lr_scheduler = {
+            "scheduler": optim.lr_scheduler.OneCycleLR(
+                optimizer,
+                max_lr=self.lr,
+                steps_per_epoch=sum(
+                    [len(v) for k, v in self.trainer.datamodule.train_dataloader().items()]
+                ),  # len(self.trainer.datamodule.train_dataloader()["labeled"]),
+                epochs=self.epochs,
+                anneal_strategy="linear",
+                final_div_factor=30,
+            ),
+            "name": "learning_rate",
+            "interval": "step",
+            "frequency": 1,
+        }
+
+        return [optimizer], [lr_scheduler]
 
     @staticmethod
     def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:

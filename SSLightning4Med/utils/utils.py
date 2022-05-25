@@ -47,7 +47,7 @@ class mulitmetrics:
         self.medpy_asd_list = []
 
     def calculate_metric_percase(self, pred: ndarray, gt: ndarray) -> Tuple[float, float, float, float]:
-        if 1 in pred and 1 in gt:
+        if 1 in gt and 1 in pred:  # there is a ground  truth and some prediction
             dc = metric.binary.dc(pred, gt)
             jc = metric.binary.jc(pred, gt)
             hd = metric.binary.hd95(
@@ -55,7 +55,12 @@ class mulitmetrics:
                 gt,
             )
             asd = metric.binary.asd(pred, gt)
-        else:
+        elif 1 in gt:  # label not predicted: medpy error
+            dc = 0
+            jc = 0
+            hd = np.NaN
+            asd = np.NaN
+        else:  # no ground truth for this class -> error
             dc = np.NaN
             jc = np.NaN
             hd = np.NaN
@@ -71,7 +76,7 @@ class mulitmetrics:
         return hist
 
     def add_batch(self, predictions: ndarray, gts: ndarray) -> None:
-        for i in range(1, self.num_classes):
+        for i in range(0, self.num_classes):
             dc, jc, hd, asd = self.calculate_metric_percase((predictions == i).astype(int), (gts == i).astype(int))
             self.medpy_dc_list.append(dc)
             self.medpy_jc_list.append(jc)
@@ -187,4 +192,6 @@ def get_color_map(dataset):
             [255, 255, 255],
         ],
         "multiorgan": [[s * 10, s * 10, s * 10] for s in range(0, 14)],
+        "brats": [[s * 10, s * 10, s * 10] for s in range(0, 4)],
+        "hippocampus": [[s * 10, s * 10, s * 10] for s in range(0, 3)],
     }[dataset]

@@ -60,7 +60,7 @@ class BaseDataset:
         # By default OpenCV uses BGR color space for color images,
         # so we need to convert the image to RGB color space.
 
-        # check if image is grayscale:
+        # check if image is grayscale, if not convert to RGB
         if len(image.shape) == 3:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.pseudo_mask_path is not None:

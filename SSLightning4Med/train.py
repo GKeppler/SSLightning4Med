@@ -5,7 +5,7 @@ from typing import Any
 
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 import wandb
@@ -28,7 +28,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["melanoma", "pneumothorax", "breastCancer", "multiorgan"],
+        choices=["melanoma", "pneumothorax", "breastCancer", "multiorgan", "brats", "hippocampus"],
         default="multiorgan",
     )
     parser.add_argument(
@@ -73,18 +73,47 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
             "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
             "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
+            "brats": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/Brats",
         }[args.dataset]
 
     if args.epochs is None:
         args.epochs = 100
     if args.crop_size is None:
-        args.crop_size = {"melanoma": 256, "breastCancer": 256, "pneumothorax": 256, "multiorgan": 256}[args.dataset]
+        args.crop_size = {
+            "melanoma": 256,
+            "breastCancer": 256,
+            "pneumothorax": 256,
+            "multiorgan": 256,
+            "brats": 224,
+            "hippocampus": 32,
+        }[args.dataset]
     if args.base_size is None:
-        args.base_size = {"melanoma": 512, "breastCancer": 512, "pneumothorax": 512, "multiorgan": 512}[args.dataset]
+        args.base_size = {
+            "melanoma": 512,
+            "breastCancer": 512,
+            "pneumothorax": 512,
+            "multiorgan": 512,
+            "brats": 240,
+            "hippocampus": 50,
+        }[args.dataset]
     if args.n_class is None:
-        args.n_class = {"melanoma": 2, "breastCancer": 3, "pneumothorax": 2, "multiorgan": 14}[args.dataset]
+        args.n_class = {
+            "melanoma": 2,
+            "breastCancer": 3,
+            "pneumothorax": 2,
+            "multiorgan": 14,
+            "brats": 4,
+            "hippocampus": 3,
+        }[args.dataset]
     if args.n_channel is None:
-        args.n_channel = {"melanoma": 3, "breastCancer": 1, "pneumothorax": 1, "multiorgan": 1}[args.dataset]
+        args.n_channel = {
+            "melanoma": 3,
+            "breastCancer": 1,
+            "pneumothorax": 1,
+            "multiorgan": 1,
+            "brats": 1,
+            "hippocampus": 1,
+        }[args.dataset]
 
     if args.split_file_path is None:
         args.split_file_path = (
@@ -106,8 +135,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     return args
 
 
-def main():
-    args = base_parse_args(BaseModule)
+def main(args):
     seed_everything(123, workers=True)
 
     # Define DataModule with Augmentations
@@ -139,6 +167,8 @@ def main():
         mode="max",
         save_weights_only=True,
     )
+
+    lr_monitor = LearningRateMonitor(logging_interval="step")
     if args.use_wandb:
         wandb.finish()
         # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
@@ -154,9 +184,9 @@ def main():
         max_epochs=args.epochs,
         log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, lr_monitor],
         gpus=[0],
-        # precision=16,
+        precision=16,
         # accelerator="cpu",
         # profiler="pytorch",
         # auto_lr_find=True,
@@ -178,11 +208,16 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        # exit gracefully, so wandb logs the problem
-        print(traceback.print_exc(), e)
-        exit(1)
-    finally:
-        wandb.finish()
+    args = base_parse_args(BaseModule)
+    # pront exception to be logged in wandb
+    if args.use_wandb:
+        try:
+            main(args)
+        except Exception as e:
+            # exit gracefully, so wandb logs the problem
+            print(traceback.print_exc(), e)
+            exit(1)
+        finally:
+            wandb.finish()
+    else:
+        main(args)
