@@ -22,9 +22,11 @@ class Augmentations:
         return A.Compose(
             [
                 # A.RandomScale(scale_limit=(0.5, 2), p=1),
-                A.PadIfNeeded(self.args.crop_size, self.args.crop_size),
-                A.RandomCrop(self.args.crop_size, self.args.crop_size),
-                A.HorizontalFlip(p=0.5),
+                # A.PadIfNeeded(self.args.crop_size, self.args.crop_size),
+                # A.RandomCrop(self.args.crop_size, self.args.crop_size),
+                A.SmallestMaxSize(self.args.crop_size),
+                A.CenterCrop(self.args.crop_size, self.args.crop_size),
+                # A.HorizontalFlip(p=0.5),
                 A.Normalize(self.mean, self.std),
                 ToTensorV2(),
             ]
@@ -34,8 +36,10 @@ class Augmentations:
         return A.Compose(
             [
                 # A.RandomScale(scale_limit=(0.5, 2), p=1),
-                A.PadIfNeeded(self.args.crop_size, self.args.crop_size),
-                A.RandomCrop(self.args.crop_size, self.args.crop_size),
+                # A.PadIfNeeded(self.args.crop_size, self.args.crop_size),
+                # A.RandomCrop(self.args.crop_size, self.args.crop_size),
+                A.SmallestMaxSize(self.args.crop_size),
+                A.CenterCrop(self.args.crop_size, self.args.crop_size),
                 A.HorizontalFlip(p=0.5),
                 A.GaussianBlur(p=0.5),
                 A.ColorJitter(p=0.8),
@@ -48,8 +52,8 @@ class Augmentations:
     def a_val_transforms(self):
         return A.Compose(
             [
-                A.PadIfNeeded(self.args.crop_size, self.args.crop_size),
-                A.Resize(self.args.crop_size, self.args.crop_size),
+                A.SmallestMaxSize(self.args.crop_size),
+                A.CenterCrop(self.args.crop_size, self.args.crop_size),
                 A.Normalize(self.mean, self.std),
                 ToTensorV2(),
             ]
