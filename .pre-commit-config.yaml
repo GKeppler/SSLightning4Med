@@ -1,9 +1,8 @@
 repos:
-  - repo: local
+  - repo: https://github.com/myint/autoflake
+    rev: v1.4
     hooks:
       - id: autoflake
-        name: Remove unused variables and imports
-        entry: bash -c 'autoflake "$@"; git add -u' --
         language: python
         args:
           [
