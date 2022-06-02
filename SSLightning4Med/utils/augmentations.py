@@ -7,6 +7,7 @@ from albumentations.pytorch import ToTensorV2
 class Augmentations:
     def __init__(self, args):
         self.args = args
+        # imageNET:  mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
         self.mean, self.std = {
             "melanoma": ([0.7116, 0.5834, 0.5337], [0.1471, 0.1646, 0.1795]),
             "pneumothorax": (0.5380, 0.2641),
@@ -14,6 +15,7 @@ class Augmentations:
             "multiorgan": (0.1935, 0.1889),
             "brats": (0.0775, 0.1539),
             "hippocampus": (0.2758, 0.1628),
+            "zebrafish": ([0.5129, 0.5012, 0.5181], [0.2336, 0.2362, 0.2552]),
         }[args.dataset]
 
     def a_train_transforms_weak(self):

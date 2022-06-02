@@ -1,5 +1,12 @@
 """
 This script downloads http://medicaldecathlon.com/
+The data set consists of 195 MRI images acquired from 90 healthy adults and 105
+adults with a non-affective psychotic disorder. T1-weighted MPRAGE was used as the imaging
+sequence. The corresponding target ROIs were
+- the anterior
+- posterior of the hippocampus,
+defined as the hippocampus proper and parts of the subiculum. "
+
 """
 import glob
 import os
@@ -167,13 +174,12 @@ def split(base_path: str):
     default="/home/gustav/datasets/hippocampus",  # "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/hippocampus"
 )
 def main(base_path: str):
-    # project_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
     raw_path = os.path.join(base_path, "raw")
-    # download_data_from_gdrive(raw_path)
-    # unpack(os.path.join(raw_path, "Hippocampus.tar"))
+    download_data_from_gdrive(raw_path)
+    unpack(os.path.join(raw_path, "Hippocampus.tar"))
     slices_path = os.path.join(raw_path, os.pardir, "slices")
-    # slice_images(raw_path, slices_path)
-    split(slices_path)
+    slice_images(raw_path, slices_path)
+    # split(slices_path)
 
 
 if __name__ == "__main__":

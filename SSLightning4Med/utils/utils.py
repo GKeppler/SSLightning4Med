@@ -211,4 +211,5 @@ def get_color_map(dataset):
         "multiorgan": [[s * 10, s * 10, s * 10] for s in range(0, 14)],
         "brats": [[s * 10, s * 10, s * 10] for s in range(0, 4)],
         "hippocampus": [[s * 10, s * 10, s * 10] for s in range(0, 3)],
+        "zebrafish": [[s * 10, s * 10, s * 10] for s in range(0, 4)],
     }[dataset]

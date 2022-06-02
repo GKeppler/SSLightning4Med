@@ -139,7 +139,6 @@ class BaseModule(pl.LightningModule):
             """
             optimizer = optim.Adam(self.parameters(), lr=self.lr)
             return [optimizer]
-
         elif self.args.optimizer == "AdamWOneCycle":
             """
             Super-Convergence: Very Fast Training of Neural Networks Using Large Learning Rates

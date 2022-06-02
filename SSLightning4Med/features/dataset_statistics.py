@@ -7,6 +7,7 @@ breastCancer    mean:  tensor([0.3298])                 std:  tensor([0.2218])
 multiorgan      mean:  tensor([0.1935])                 std:  tensor([0.1889])
 brats           mean:  tensor([0.0775])                 std:  tensor([0.1539])
 hippocampus     mean:  tensor([0.2758])                 std:  tensor([0.1628])
+zebrafish       mean:  tensor([0.5129, 0.5012, 0.5181]) std:  tensor([0.2336, 0.2362, 0.2552])
 """
 import albumentations as A
 import torch

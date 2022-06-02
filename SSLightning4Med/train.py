@@ -28,7 +28,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["melanoma", "pneumothorax", "breastCancer", "multiorgan", "brats", "hippocampus"],
+        choices=["melanoma", "pneumothorax", "breastCancer", "multiorgan", "brats", "hippocampus", "zebrafish"],
         default="multiorgan",
     )
     parser.add_argument(
@@ -86,6 +86,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "multiorgan": 256,
             "brats": 224,
             "hippocampus": 32,
+            "zebrafish": 480,
         }[args.dataset]
     if args.base_size is None:
         args.base_size = {
@@ -95,6 +96,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "multiorgan": 512,
             "brats": 240,
             "hippocampus": 50,
+            "zebrafish": 480,
         }[args.dataset]
     if args.n_class is None:
         args.n_class = {
@@ -104,6 +106,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "multiorgan": 14,
             "brats": 4,
             "hippocampus": 3,
+            "zebrafish": 4,
         }[args.dataset]
     if args.n_channel is None:
         args.n_channel = {
@@ -113,6 +116,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "multiorgan": 1,
             "brats": 1,
             "hippocampus": 1,
+            "zebrafish": 3,
         }[args.dataset]
 
     if args.split_file_path is None:
