@@ -5,8 +5,10 @@ https://osf.io/c3ut5/download
 
 """
 import glob
+import io
 import os
 import random
+import zipfile
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
@@ -15,16 +17,12 @@ from typing import List
 import click
 import cv2
 import numpy as np
+import requests
 import yaml
 from sklearn.model_selection import KFold
 
 
 def download_zip(url, output_path):
-    import io
-    import zipfile
-
-    import requests
-
     r = requests.get(url)
     z = zipfile.ZipFile(io.BytesIO(r.content))
     z.extractall(output_path)
@@ -140,7 +138,7 @@ def split(base_path: str):
 @click.argument(
     "base_path",
     type=click.Path(),
-    default="/home/gustav/datasets/zebrafish",
+    default="/home/kit/stud/uwdus/Masterthesis/data/zebrafish",
 )
 def main(base_path: str):
     download_zip("https://osf.io/c3ut5/download", base_path)

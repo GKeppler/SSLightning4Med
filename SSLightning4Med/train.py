@@ -36,13 +36,13 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         type=str,
         default=None,
     )
-    parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--crop-size", type=int, default=None)
     parser.add_argument("--base-size", type=int, default=None)
     parser.add_argument("--n-class", type=int, default=None)
     parser.add_argument("--n-channel", type=int, default=None)
-    parser.add_argument("--n-workers", type=int, default=8)
+    parser.add_argument("--n-workers", type=int, default=10)
     parser.add_argument("--loss", type=str, default="Dice", choices=["CE", "Dice"])
     parser.add_argument("--val-split", type=str, default="val_split_0")
 
@@ -63,7 +63,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser = LightningModule.add_model_specific_args(parser)
     # add all the availabele trainer options to argparse
     # ie: now --gpus --num_nodes ... --fast_dev_run all work in the cli
-    parser = pl.Trainer.add_argparse_args(parser)
+    # parser = pl.Trainer.add_argparse_args(parser)
     args = parser.parse_args()
     if args.method is None:
         raise ValueError("no methodname in model_specific_args specified    .")
@@ -86,7 +86,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "multiorgan": 256,
             "brats": 224,
             "hippocampus": 32,
-            "zebrafish": 480,
+            "zebrafish": 256,
         }[args.dataset]
     if args.base_size is None:
         args.base_size = {
@@ -192,7 +192,7 @@ def main(args):
         gpus=[0],
         precision=16,
         # accelerator="cpu",
-        # profiler="pytorch",
+        # profiler="simple",
         # auto_lr_find=True,
         # track_grad_norm=True,
         # detect_anomaly=True,
