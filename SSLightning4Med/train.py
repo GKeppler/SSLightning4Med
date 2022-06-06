@@ -171,8 +171,19 @@ def main(args):
         mode="max",
         save_weights_only=True,
     )
+    from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
+
+    # early Stopping
+    early_stopping = EarlyStopping(
+        monitor="val_mIoU",
+        patience=5,
+        verbose=True,
+        mode="max",
+        min_delta=0.01,
+    )
+
     if args.use_wandb:
         wandb.finish()
         # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
@@ -188,7 +199,7 @@ def main(args):
         max_epochs=args.epochs,
         log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-        callbacks=[checkpoint_callback, lr_monitor],
+        callbacks=[checkpoint_callback, lr_monitor, early_stopping],
         gpus=[0],
         precision=16,
         # accelerator="cpu",
