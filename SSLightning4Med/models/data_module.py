@@ -85,8 +85,8 @@ class SemiDataModule(pl.LightningDataModule):
             )
             combined_loaders = CombinedLoader(
                 {
-                    "pseudolabeled": loader_pseudolabeled,
                     "labeled": loader_labeled,
+                    "pseudolabeled": loader_pseudolabeled,
                 },
                 "max_size_cycle",
             )
@@ -113,8 +113,8 @@ class SemiDataModule(pl.LightningDataModule):
             )
             combined_loaders = CombinedLoader(
                 {
-                    "unlabeled": loader_unlabeled,
                     "labeled": loader_labeled,
+                    "unlabeled": loader_unlabeled,
                 },
                 "max_size_cycle",
             )
@@ -155,9 +155,9 @@ class SemiDataModule(pl.LightningDataModule):
             )
             combined_loaders = CombinedLoader(
                 {
+                    "labeled": loader_labeled,
                     "unlabeled_wa": loader_unlabeled_wa,
                     "unlabeled_sa": loader_unlabeled_sa,
-                    "labeled": loader_labeled,
                 },
                 "max_size_cycle",
             )

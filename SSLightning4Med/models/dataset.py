@@ -48,6 +48,7 @@ class BaseDataset:
         return segmentation_mask
 
     def __len__(self) -> int:
+        assert len(self.id_list) != 0, "Oh no! A Dataset is emtpy"
         return len(self.id_list)
 
     def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, str]:
