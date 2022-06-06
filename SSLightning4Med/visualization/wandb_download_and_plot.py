@@ -15,11 +15,14 @@ import wandb
 #%%
 # Project is specified by <entity/project-name>
 project_name = "test2"
-sweep_id = "a8rmnwds"
+# most important filters are: "display_name", "sweep" in combination with or:
+# e.g "$or": [{"display_name":"twilight-dew-182"},{"sweep": "bqi2hy0k"}, {"sweep": "8827ug5t"}]
+sweep_id = "bqi2hy0k"
 filters = {
     # "$or": [{"state": "finished"}, {"state": "crashed"}],
     "state": "finished",
-    "sweep": sweep_id,
+    "$or": [{"display_name": "twilight-dew-182"}, {"sweep": "bqi2hy0k"}, {"sweep": "8827ug5t"}],  #
+    # "sweep": sweep_id,
 }
 # download data
 api = wandb.Api()
@@ -55,7 +58,13 @@ all_df["split"] = all_df["split"].apply(lambda x: x.replace("_", "/"))
 if len(all_df["dataset"].unique()) > 1:
     print("more that on dataset in the metrics", all_df["dataset"].unique())
 
+# drop rows with na in column "test mDICE"
+all_df = all_df.dropna(subset=["test mDICE"])
+all_df.head()
 # %%
+# calculate metrics
+# for a given methods this will calculate the mean and std of the metrics
+
 # specify column names for metrics that are plotted later
 # ONLY WHEN A SUPERVISED ONLY TEST RUN WAS PERFORMED IS multiple_tests = True
 multiple_tests = False
@@ -93,8 +102,6 @@ else:
         "test mDICE",
     ]
 
-#%%
-# calculate metrics
 metrics_df = all_df[columns].groupby("split").agg([np.mean, np.std, np.count_nonzero])
 metrics_df = metrics_df.reindex(["1", "1/4", "1/8", "1/30"])
 metrics_df.head()
@@ -127,6 +134,7 @@ for col in columns_table:
 plt.savefig(f"{project_name}_metrics.pdf", transparent=False, bbox_inches="tight")
 #%%
 # methods comparison
+
 metric_dict = {
     "mean Average Surface Distance": "test medpy_asd",
     "mean Hausdorff Distance": "test medpy_hd",
@@ -148,17 +156,26 @@ for metric_name in metric_dict.keys():
     method_df.dropna(axis=0, how="all", inplace=True)
     columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
     method_df.head()
+
     # draw figure
     fig, ax = plt.subplots()
 
     for label, group in method_df.reset_index().groupby("method"):
+        # add a stepped horizontal lien to the plot
+        if label == "Supervised":
+            # get value of metric where split is 1
+            value = group.loc[group["split"] == "1", metric]["mean"].values[0]
+            print(value)
+            # drop this row from the dataframe "group"
+            group = group.drop(group[group["split"] == "1"].index)
+            ax.axhline(y=value, color="k", linestyle="--")
         group.columns = ["".join(col) for col in group.columns]
         # replace Na with 0
         group[metric + "std"].replace(np.NaN, 0, inplace=True)
-        group["order"] = group["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]))
+        group["order"] = group["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
         print(group.head())
         group.sort_values(by="order").plot("split", metric + "mean", yerr=metric + "std", label=label, ax=ax)
-    ax.set_title("Metric: " + metric_name + "\n" + "Dataset: " + all_df["dataset"][0])
+    ax.set_title("Metric: " + metric_name + "\n" + "Dataset: " + all_df["dataset"].iloc[0])
     if not os.path.exists("figures"):
         os.makedirs("figures")
     plt.savefig(f"figures/{project_name}_{sweep_id}_{metric}_methods.pdf", transparent=False, bbox_inches="tight")

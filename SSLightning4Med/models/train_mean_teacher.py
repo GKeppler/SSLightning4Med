@@ -52,11 +52,11 @@ class Bn_Controller:
 class MeanTeacherModule(BaseModule):
     def __init__(self, args: Any) -> None:
         super(MeanTeacherModule, self).__init__(args)
-        self.consistency = 0.1
         self.bn_controller = Bn_Controller()
         self.net_ema = deepcopy(self.net)
         for param in self.net_ema.parameters():
             param.detach_()
+        self.ramp_up = 0.1  # from CCT paper
         self.cons_w_unsup = consistency_weight(final_w=30, rampup_ends=self.ramp_up * self.epochs)  # from CCT paper
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
