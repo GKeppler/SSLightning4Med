@@ -249,3 +249,8 @@ class small_UNet_CCT(nn.Module):
         aux3_feature = [FeatureDropout(i) for i in feature]
         aux_seg3 = self.aux_decoder3(aux3_feature)
         return main_seg, aux_seg1, aux_seg2, aux_seg3
+
+
+if __name__ == "main":
+    input = torch.randn(1, 1, 32, 32)
+    print(UNet(1, 3)(input).shape)

@@ -60,6 +60,7 @@ class SemiDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 pin_memory=True,
+                shuffle=True,
             )
             return {"labeled": loader_labeled}
         elif self.mode == "pseudo_train":
@@ -68,6 +69,7 @@ class SemiDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 pin_memory=True,
+                shuffle=True,
             )
             # unsupervised
             pseudolabeled_dataset = BaseDataset(
@@ -97,6 +99,7 @@ class SemiDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 pin_memory=True,
+                shuffle=True,
             )
             # unsupervised
             unlabeled_dataset = BaseDataset(
@@ -125,6 +128,7 @@ class SemiDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 pin_memory=True,
+                shuffle=True,
             )
             # unsupervised
             unlabeled_dataset_wa = BaseDataset(

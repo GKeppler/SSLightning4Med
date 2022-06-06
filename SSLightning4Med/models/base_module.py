@@ -49,7 +49,7 @@ class BaseModule(pl.LightningModule):
             default=True,
             help="whether to use ST++",
         )
-        parser.add_argument("--use-tta", default=True, help="whether to use Test Time Augmentation")
+        parser.add_argument("--use-tta", default=False, help="whether to use Test Time Augmentation")
         return parser
 
     def __init__(self, args) -> None:  # type: ignore

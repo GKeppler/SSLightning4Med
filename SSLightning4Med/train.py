@@ -166,23 +166,23 @@ def main(args):
 
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
+        monitor="val_mIoU",
         dirpath=os.path.join("./", f"{args.save_path}"),
-        filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.2f}",
+        filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.3f}",
         mode="max",
         save_weights_only=True,
     )
-    from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
     # early Stopping
-    early_stopping = EarlyStopping(
-        monitor="val_mIoU",
-        patience=5,
-        verbose=True,
-        mode="max",
-        min_delta=0.01,
-    )
+    # early_stopping = EarlyStopping(
+    #     monitor="val_mIoU",
+    #     patience=10,
+    #     mode="max",
+    #     verbose=True,
+    #     min_delta=0.001,
+    # )
 
     if args.use_wandb:
         wandb.finish()
@@ -197,9 +197,12 @@ def main(args):
         args,
         fast_dev_run=dev_run,
         max_epochs=args.epochs,
-        log_every_n_steps=2,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-        callbacks=[checkpoint_callback, lr_monitor, early_stopping],
+        callbacks=[
+            checkpoint_callback,
+            lr_monitor,
+            # early_stopping
+        ],
         gpus=[0],
         precision=16,
         # accelerator="cpu",
