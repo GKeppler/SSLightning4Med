@@ -6,6 +6,7 @@ from typing import Any
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 import wandb
@@ -44,6 +45,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--n-channel", type=int, default=None)
     parser.add_argument("--n-workers", type=int, default=10)
     parser.add_argument("--loss", type=str, default="Dice", choices=["CE", "Dice"])
+    parser.add_argument("--early-stopping", action="store_true", default=False)
     parser.add_argument("--val-split", type=str, default="val_split_0")
 
     # semi-supervised settings
@@ -176,13 +178,13 @@ def main(args):
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
     # early Stopping
-    # early_stopping = EarlyStopping(
-    #     monitor="val_mIoU",
-    #     patience=10,
-    #     mode="max",
-    #     verbose=True,
-    #     min_delta=0.001,
-    # )
+    early_stopping = EarlyStopping(
+        monitor="val_mIoU",
+        patience=50,
+        mode="max",
+        verbose=True,
+        min_delta=0.01,
+    )
 
     if args.use_wandb:
         wandb.finish()
@@ -201,7 +203,7 @@ def main(args):
         callbacks=[
             checkpoint_callback,
             lr_monitor,
-            # early_stopping
+            early_stopping if args.early_stopping else None,
         ],
         gpus=[0],
         precision=16,
