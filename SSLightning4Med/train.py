@@ -104,7 +104,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.n_class is None:
         args.n_class = {
             "melanoma": 2,
-            "breastCancer": 3,
+            "breastCancer": 2,
             "pneumothorax": 2,
             "multiorgan": 14,
             "brats": 4,
