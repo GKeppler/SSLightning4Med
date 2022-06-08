@@ -168,22 +168,22 @@ def main(base_path: str):
     logging.info("Starting download")
     download_zip(
         "https://isic-challenge-data.s3.amazonaws.com/2017/ISIC-2017_Training_Data.zip",
-        os.path.join(base_path, "raw", "train", "images", "ISIC-2017_Training_Data.zip"),
+        os.path.join(base_path, "train", "images", "ISIC-2017_Training_Data.zip"),
     )
     download_zip(
         "https://isic-challenge-data.s3.amazonaws.com/2017/ISIC-2017_Training_Part1_GroundTruth.zip",
-        os.path.join(base_path, "raw", "train", "labels", "ISIC-2017_Training_Part1_GroundTruth.zip"),
+        os.path.join(base_path, "train", "labels", "ISIC-2017_Training_Part1_GroundTruth.zip"),
     )
     download_zip(
         "https://isic-challenge-data.s3.amazonaws.com/2017/ISIC-2017_Validation_Data.zip",
-        os.path.join(base_path, "raw", "test", "images", "ISIC-2017_Validation_Data.zip"),
+        os.path.join(base_path, "test", "images", "ISIC-2017_Validation_Data.zip"),
     )
     download_zip(
         "https://isic-challenge-data.s3.amazonaws.com/2017/ISIC-2017_Validation_Part1_GroundTruth.zip",
-        os.path.join(base_path, "raw", "test", "labels", "ISIC-2017_Validation_Part1_GroundTruth.zip"),
+        os.path.join(base_path, "test", "labels", "ISIC-2017_Validation_Part1_GroundTruth.zip"),
     )
     logging.info("downloading done. Rezing images")
-    resize(base_path, "raw", "")
+    resize(base_path, "melanoma", "melanoma256")
     logging.info("resizing done. Splitting")
     # split(base_path)
     logging.info("splitting done. Finished")
