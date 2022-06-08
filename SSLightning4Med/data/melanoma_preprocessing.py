@@ -71,7 +71,10 @@ def resize(base_path: str, old_name, new_name, base_size=256):
         # tqdm for loop
         for name in tqdm.tqdm(files):
             img_path = os.path.join(path, name)
-            if img_path.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".bmp", ".gif")):
+            if (
+                img_path.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".bmp", ".gif"))
+                and "superpixel" not in img_path
+            ):
                 im = Image.open(img_path)
                 imResize = resize_crop(im, base_size)
                 img_path_new = img_path.replace(old_name, new_name)
@@ -89,17 +92,21 @@ def split(base_path: str):
     # set basic params and load file list
     dataset = r"melanoma"
     cross_val_splits = 5
-    num_shuffels = 1
-    splits = ["1/40"]
+    num_shuffels = 5
+    splits = ["1", "1/4", "1/8", "1/30"]
     training_filelist: List[str] = []
     test_filelist: List[str] = []
 
     training_filelist = sorted(glob.glob(os.path.join(base_path, "train", "images", "*.jpg"), recursive=True))
-    training_filelist = ["train/images/%s.jpg train/labels/%s_segmentation.png" % (f, f) for f in training_filelist]
+    training_filelist = [
+        "train/images/%s.jpg train/labels/%s_segmentation.png" % (f[-16:-4], f[-16:-4]) for f in training_filelist
+    ]
 
     # all iamges are in this case in the train folder
     test_filelist = sorted(glob.glob(os.path.join(base_path, "test", "images", "*.jpg"), recursive=True))
-    test_filelist = ["train/images/%s.jpg train/labels/%s_segmentation.png" % (f, f) for f in test_filelist]
+    test_filelist = [
+        "test/images/%s.jpg test/labels/%s_segmentation.png" % (f[-16:-4], f[-16:-4]) for f in test_filelist
+    ]
 
     list_len = len(training_filelist)
     print(training_filelist[:2], list_len)
@@ -138,10 +145,10 @@ def split(base_path: str):
 
     # test yaml file
     yaml_dict = {}
-    yaml_path = rf"datas/splits/{dataset}/"
+    yaml_path = rf"data/splits/{dataset}/"
     Path(yaml_path).mkdir(parents=True, exist_ok=True)
 
-    with open(yaml_path + "/test_valset.yaml", "w+") as outfile:
+    with open(yaml_path + "/test.yaml", "w+") as outfile:
         yaml.dump(test_filelist, outfile, default_flow_style=False)
 
 
@@ -149,10 +156,10 @@ def split(base_path: str):
 @click.argument(
     "base_path",
     type=click.Path(),
-    default="/home/gustav/datasets/melanoma",  # /home/kit/stud/uwdus/Masterthesis/data/zebrafish",
+    default="/home/kit/stud/uwdus/Masterthesis/data/melanoma",  # /home/kit/stud/uwdus/Masterthesis/data/melanoma",
 )
 def main(base_path: str):
-
+    Path(base_path).mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",

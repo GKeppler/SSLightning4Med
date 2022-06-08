@@ -45,7 +45,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--n-channel", type=int, default=None)
     parser.add_argument("--n-workers", type=int, default=10)
     parser.add_argument("--loss", type=str, default="Dice", choices=["CE", "Dice"])
-    parser.add_argument("--early-stopping", action="store_true", default=False)
+    parser.add_argument("--early-stopping", default=False)
     parser.add_argument("--val-split", type=str, default="val_split_0")
 
     # semi-supervised settings
@@ -71,7 +71,8 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         raise ValueError("no methodname in model_specific_args specified    .")
     if args.data_root is None:
         args.data_root = {
-            "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
+            # "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
+            "melanoma": "/home/kit/stud/uwdus/Masterthesis/data/melanoma",
             "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
             "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
             "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
@@ -168,7 +169,7 @@ def main(args):
 
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_mIoU",
+        # monitor="val_mIoU",
         dirpath=os.path.join("./", f"{args.save_path}"),
         filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.3f}",
         mode="max",
@@ -195,16 +196,15 @@ def main(args):
 
     # define Trainer
     dev_run = False  # not working when predicting with best_model checkpoint
+    callbacks = [checkpoint_callback, lr_monitor]
+    if args.early_stopping:
+        callbacks.append(early_stopping)
     trainer = pl.Trainer.from_argparse_args(
         args,
         fast_dev_run=dev_run,
         max_epochs=args.epochs,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-        callbacks=[
-            checkpoint_callback,
-            lr_monitor,
-            early_stopping if args.early_stopping else None,
-        ],
+        callbacks=callbacks,
         gpus=[0],
         precision=16,
         # accelerator="cpu",
