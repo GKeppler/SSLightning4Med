@@ -4,13 +4,9 @@
 # train requirements and external requirements
 albumentations==1.1.0
 click
-coverage
-flake8
+einops
 MedPy==0.4.0
 pathlib2
 python-dotenv>=0.5.1
 pytorch-lightning==1.5.9
-Sphinx
-torch==1.10.2
-torchvision==0.11.3
 wandb==0.12.0

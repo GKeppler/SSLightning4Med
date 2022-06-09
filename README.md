@@ -5,6 +5,15 @@ This is the official  [Pytorch Lightning](https://github.com/PyTorchLightning/py
 
 ## Installation
 
+### Create Conda Environment
+
+The instructions assumes that you have Miniconda installed on your machine.
+
+'''
+conda env create -f environment-gpu.yaml
+'''
+
+### Alternative: pip install
 TODO
 `pip install -U sslightning4med`
 
@@ -95,7 +104,7 @@ Project Organization
     │   │   │       ├── [Dataset]
     │   │   │           ├── 1
     │   │   │               ├── split_0
-    │   │   │                   └── split.yaml  
+    │   │   │                   └── split.yaml
     │   │   └── make_dataset.py
     │   │
     │   ├── features       <- Scripts to turn raw data into features for modeling

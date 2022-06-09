@@ -4,7 +4,7 @@ from typing import List
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import optim
-from torchmetrics import IoU
+from torchmetrics import JaccardIndex
 
 from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.deeplabv3plus import DeepLabV3Plus
@@ -71,7 +71,7 @@ class BaseModule(pl.LightningModule):
         loss = {"Dice": DiceLoss, "CE": CELoss}[args.loss]
         self.criterion = loss(self.n_class)
         self.val_criterion = loss(self.n_class)
-        self.val_IoU = IoU(
+        self.val_IoU = JaccardIndex(
             # ignore_index=0,
             num_classes=self.n_class,
         )

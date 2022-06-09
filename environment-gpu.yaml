@@ -1,0 +1,12 @@
+---
+name: sslightning4med
+channels:
+    - conda-forge
+    - pytorch
+dependencies:
+    - python=3.8.12
+    - pip=21.3
+    - pytorch::pytorch
+    - pytorch::torchvision
+    - pip:
+          - -r requirements.txt
