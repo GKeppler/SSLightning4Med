@@ -114,7 +114,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.n_channel is None:
         args.n_channel = {
             "melanoma": 3,
-            "breastCancer": 1,
+            "breastCancer": 3,
             "pneumothorax": 1,
             "multiorgan": 1,
             "brats": 1,
@@ -131,7 +131,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.pseudo_mask_path is None:
         args.pseudo_mask_path = f"{args.data_root}/pseudo_masks/{args.method}/{args.split}/split_{args.shuffle}"
     if args.save_path is None:
-        args.save_path = f"{args.data_root}/{args.method}/{args.split}/split_{args.shuffle}"
+        args.save_path = f"{args.data_root}/modelcheckpoints/{args.method}/{args.split}/split_{args.shuffle}"
     if args.reliable_id_path is None:
         args.reliable_id_path = f"{args.data_root}/reliable_ids/{args.method}/{args.split}/split_{args.shuffle}"
 

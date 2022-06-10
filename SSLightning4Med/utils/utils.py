@@ -77,7 +77,7 @@ class mulitmetrics:
         return hist
 
     def add_batch(self, predictions: ndarray, gts: ndarray) -> None:
-        for i in range(0, self.num_classes):
+        for i in range(1, self.num_classes):
             dc, jc, hd, asd = self.calculate_metric_percase((predictions == i).astype(int), (gts == i).astype(int))
             self.medpy_dc_list.append(dc)
             self.medpy_jc_list.append(jc)
