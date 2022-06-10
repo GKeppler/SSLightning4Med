@@ -8,8 +8,6 @@ from pathlib import Path
 import click
 from utils import resize
 
-from SSLightning4Med.data.utils import split
-
 
 def download_zip(url, filename):
     import functools
@@ -86,7 +84,7 @@ def main(base_path: str):
     test_filelist = [
         "test/images/%s.jpg test/labels/%s_segmentation.png" % (f[-16:-4], f[-16:-4]) for f in test_filelist
     ]
-    split("melanoma", training_filelist, test_filelist)
+    # split("melanoma", training_filelist, test_filelist)
     logging.info("splitting done. Finished")
 
 

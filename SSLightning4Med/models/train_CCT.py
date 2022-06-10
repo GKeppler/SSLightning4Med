@@ -58,9 +58,9 @@ class CCTModule(BaseModule):
         unsupervised_loss = (consistency_loss_aux1 + consistency_loss_aux2 + consistency_loss_aux3) / 3
         # warmup unsup loss to avoid inital noise
         loss = supervised_loss + unsupervised_loss * self.cons_w_unsup(self.current_epoch)
-        self.log("supervised_loss", supervised_loss, on_epoch=True, on_step=True)
-        self.log("unsupervised_loss", unsupervised_loss, on_epoch=True, on_step=True)
-        self.log("train_loss", loss, on_epoch=True, on_step=True)
+        self.log("supervised_loss", supervised_loss, on_epoch=True, on_step=False)
+        self.log("unsupervised_loss", unsupervised_loss, on_epoch=True, on_step=False)
+        self.log("train_loss", loss, on_epoch=True, on_step=False)
         return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):  # type: ignore

@@ -187,7 +187,7 @@ def main(base_path: str):
     kaggle.api.dataset_download_files("aryashah2k/breast-ultrasound-images-dataset", path=base_path, unzip=True)
     train_test_split(base_path)
     resize(base_path, "breastCancer", "breastCancer256", base_size=256)
-    stratified_split(base_path)
+    # stratified_split(base_path)
 
 
 if __name__ == "__main__":

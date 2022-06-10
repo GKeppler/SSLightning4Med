@@ -37,7 +37,8 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         type=str,
         default=None,
     )
-    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--batch-size-unlabeled", type=int, default=None)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--crop-size", type=int, default=None)
     parser.add_argument("--base-size", type=int, default=None)
@@ -45,7 +46,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--n-channel", type=int, default=None)
     parser.add_argument("--n-workers", type=int, default=10)
     parser.add_argument("--loss", type=str, default="Dice", choices=["CE", "Dice"])
-    parser.add_argument("--early-stopping", default=False)
+    parser.add_argument("--early-stopping", default=True)
     parser.add_argument("--val-split", type=str, default="val_split_0")
 
     # semi-supervised settings
@@ -72,7 +73,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.data_root is None:
         args.data_root = {
             # "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
-            "melanoma": "/home/kit/stud/uwdus/Masterthesis/data/melanoma",
+            "melanoma": "/home/kit/stud/uwdus/Masterthesis/data/melanoma256",
             "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
             "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
             "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
@@ -122,6 +123,9 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "zebrafish": 3,
         }[args.dataset]
 
+    if args.batch_size_unlabeled is None:
+        args.batch_size_unlabeled = args.batch_size
+
     if args.split_file_path is None:
         args.split_file_path = (
             f"SSLightning4Med/data/splits/{args.dataset}/{args.split}/split_{args.shuffle}/split.yaml"
@@ -151,6 +155,7 @@ def main(args):
     dataModule = SemiDataModule(
         root_dir=args.data_root,
         batch_size=args.batch_size,
+        batch_size_unlabeled=args.batch_size_unlabeled,
         split_yaml_path=args.split_file_path,
         test_yaml_path=args.test_file_path,
         pseudo_mask_path=args.pseudo_mask_path,
@@ -169,7 +174,7 @@ def main(args):
 
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
-        # monitor="val_mIoU",
+        monitor="val_mIoU",
         dirpath=os.path.join("./", f"{args.save_path}"),
         filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.3f}",
         mode="max",
@@ -207,6 +212,7 @@ def main(args):
         callbacks=callbacks,
         gpus=[0],
         precision=16,
+        log_every_n_steps=2,
         # accelerator="cpu",
         # profiler="simple",
         # auto_lr_find=True,

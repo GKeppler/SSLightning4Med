@@ -67,7 +67,7 @@ class STPlusPlusModule(BaseModule):
             mask = torch.cat((mask, mask_pseudo), 0)
         pred = self(img)
         loss = self.criterion(pred, mask)
-        self.log("train_loss", loss, on_epoch=True, on_step=True)
+        self.log("train_loss", loss, on_epoch=True, on_step=False)
         return {"loss": loss}
 
     def training_epoch_end(self, outputs: List[Dict[str, Tensor]]) -> None:

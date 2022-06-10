@@ -42,8 +42,6 @@ import SimpleITK as sitk
 import synapseclient
 import synapseutils
 
-from SSLightning4Med.data.utils import split
-
 
 def download_data_from_synaps(user_name: str, password: str, raw_path: str) -> None:
     """This function downloads the dataset to the provided base folder
@@ -146,7 +144,7 @@ def main(base_path: str):
     training_filelist = ["slices/images/%s slices/labels/%s_mask.png" % (f, f[:-4]) for f in training_filelist]
     test_filelist = [s for s in filelist if s[:7] in test_subjects]
     test_filelist = ["slices/images/%s slices/labels/%s_mask.png" % (f, f[:-4]) for f in test_filelist]
-    split("multiorgan", training_filelist, test_filelist)
+    # split("multiorgan", training_filelist, test_filelist)
 
 
 if __name__ == "__main__":

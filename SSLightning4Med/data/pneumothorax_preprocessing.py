@@ -18,8 +18,6 @@ from PIL import Image
 from sklearn.model_selection import ShuffleSplit
 from tqdm import tqdm
 
-from SSLightning4Med.data.utils import split
-
 
 def rle2mask(rle, width, height):
     mask = np.zeros(width * height)
@@ -112,7 +110,7 @@ def train_test_split(base_path):
 @click.argument(
     "base_path",
     type=click.Path(),
-    default="/home/gustav/datasets/pneumothorax",
+    default="/home/kit/stud/uwdus/Masterthesis/data/pneumothorax",
 )
 def main(base_path: str):
     Path(base_path).mkdir(parents=True, exist_ok=True)
@@ -155,7 +153,7 @@ def main(base_path: str):
         if isfile(join(base_path, "test", "images", f))
     ]
 
-    split("pneumothorax", training_filelist, test_filelist)
+    # split("pneumothorax", training_filelist, test_filelist)
     logging.info("splitting done. Finished")
 
 

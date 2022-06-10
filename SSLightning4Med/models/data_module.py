@@ -20,7 +20,7 @@ class SemiDataModule(pl.LightningDataModule):
         split_yaml_path: str,
         test_yaml_path: str,
         pseudo_mask_path: str,
-        unlabeled_batch_size: Optional[int] = None,
+        batch_size_unlabeled: Optional[int] = None,
         color_map: Optional[ndarray] = None,
         mode: Optional[str] = "train",
         num_workers: Optional[int] = 0,
@@ -31,7 +31,7 @@ class SemiDataModule(pl.LightningDataModule):
         self.split_yaml_path = split_yaml_path
         self.test_yaml_path = test_yaml_path
         self.pseudo_mask_path = pseudo_mask_path
-        self.unlabeled_batch_size = batch_size if unlabeled_batch_size is None else unlabeled_batch_size
+        self.batch_size_unlabeled = batch_size if batch_size_unlabeled is None else batch_size_unlabeled
         self.color_map = color_map
         self.mode = mode
         self.num_workers = num_workers
@@ -81,7 +81,7 @@ class SemiDataModule(pl.LightningDataModule):
             )
             loader_pseudolabeled = DataLoader(
                 pseudolabeled_dataset,
-                batch_size=self.unlabeled_batch_size,
+                batch_size=self.batch_size_unlabeled,
                 num_workers=self.num_workers,
                 pin_memory=True,
             )
@@ -110,7 +110,7 @@ class SemiDataModule(pl.LightningDataModule):
             )
             loader_unlabeled = DataLoader(
                 unlabeled_dataset,
-                batch_size=self.unlabeled_batch_size,
+                batch_size=self.batch_size_unlabeled,
                 num_workers=self.num_workers,
                 pin_memory=True,
             )
@@ -139,7 +139,7 @@ class SemiDataModule(pl.LightningDataModule):
             )
             loader_unlabeled_wa = DataLoader(
                 unlabeled_dataset_wa,
-                batch_size=self.unlabeled_batch_size,
+                batch_size=self.batch_size_unlabeled,
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=False,
@@ -152,7 +152,7 @@ class SemiDataModule(pl.LightningDataModule):
             )
             loader_unlabeled_sa = DataLoader(
                 unlabeled_dataset_sa,
-                batch_size=self.unlabeled_batch_size,
+                batch_size=self.batch_size_unlabeled,
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=False,
