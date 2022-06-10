@@ -167,23 +167,13 @@ def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) 
     )
 
 
-def sigmoid_rampup(current: int, rampup_length: int = 20) -> float:
-    """Exponential rampup from https://arxiv.org/abs/1610.02242"""
-    if rampup_length == 0:
-        return 1.0
-    else:
-        current = np.clip(current, 0.0, rampup_length)
-        phase = 1.0 - current / rampup_length
-        return float(np.exp(-5.0 * phase * phase))
-
-
 # From CCT paper
 class consistency_weight(object):
     """
     ramp_types = ['sigmoid_rampup', 'linear_rampup', 'cosine_rampup', 'log_rampup', 'exp_rampup']
     """
 
-    def __init__(self, final_w, rampup_ends=7, ramp_type="sigmoid_rampup"):
+    def __init__(self, final_w, rampup_ends=7, ramp_type="exp_rampup"):
         self.final_w = final_w
         self.rampup_ends = rampup_ends
         self.rampup_func = getattr(ramps, ramp_type)

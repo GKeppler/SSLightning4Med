@@ -225,7 +225,7 @@ def main(args):
         precision=16,
         log_every_n_steps=2,
         # accelerator="cpu",
-        profiler="simple",
+        # profiler="simple",
         # auto_lr_find=True,
         # track_grad_norm=True,
         # detect_anomaly=True,
