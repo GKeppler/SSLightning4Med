@@ -78,32 +78,12 @@ class STPlusPlusModule(BaseModule):
         ]:
             self.checkpoints.append(deepcopy(self.net))
 
-    # def validation_epoch_end(self, outputs: List[Dict[str, float]]) -> Dict[str, Union[Dict[str, float], float]]:
-    #     mIOU = self.val_IoU.compute()
-    #     if mIOU > self.previous_best:
-    #         if self.previous_best != 0:
-    #             os.remove(
-    #                 os.path.join(
-    #                     self.args.save_path,
-    #                     "%s_mIOU%.2f.pth" % (self.args.net, self.previous_best),
-    #                 )
-    #             )
-    #         self.previous_best = mIOU
-    #         torch.save(
-    #             self.state_dict(),
-    #             os.path.join(
-    #                 self.args.save_path,
-    #                 "%s_mIOU%.2f.pth" % (self.args.net, mIOU),
-    #             ),
-    #         )
-    #     self.set_metrics()
-
     def predict_step(self, batch: List[Union[Tensor, Tuple[str]]], batch_idx: int) -> None:
         img, mask, id = batch
         if self.mode == "label":
             pred = self(img, tta=self.args.use_tta)
-            pred = self.oneHot(pred.cpu())
-            pred = pred.squeeze(0).numpy().astype(np.uint8)
+            pred = self.oneHot(pred)
+            pred = pred.squeeze(0).cpu().numpy().astype(np.uint8)
             pred = np.array(self.color_map)[pred]
             cv2.imwrite(
                 "%s/%s" % (self.args.pseudo_mask_path, os.path.basename(id[0].split(" ")[1])),

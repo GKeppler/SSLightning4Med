@@ -33,7 +33,72 @@ class Augmentations:
             ]
         )
 
+    # from winning appraoch pneumothorax
+    # https://github.com/sneddy/pneumothorax-segmentation
+
     def a_train_transforms_strong(self):
+        return A.Compose(
+            [
+                A.PadIfNeeded(self.args.crop_size, self.args.crop_size),
+                A.SmallestMaxSize(self.args.crop_size),
+                A.CenterCrop(self.args.crop_size, self.args.crop_size),
+                A.HorizontalFlip(p=0.5),
+                A.OneOf(
+                    [
+                        A.RandomContrast(p=0.5, limit=[-0.2, 0.2]),
+                        A.RandomGamma(p=0.5, gamma_limit=[80, 120]),
+                        A.RandomBrightness(p=0.5, limit=[-0.2, 0.2]),
+                    ]
+                ),
+                A.OneOf(
+                    [
+                        A.ElasticTransform(
+                            p=0.5,
+                            alpha=120,
+                            sigma=6.0,
+                            alpha_affine=3.5999999999999996,
+                            interpolation=1,
+                            border_mode=4,
+                            value=None,
+                            mask_value=None,
+                            approximate=False,
+                        ),
+                        A.GridDistortion(
+                            p=0.5,
+                            num_steps=5,
+                            distort_limit=[-0.3, 0.3],
+                            interpolation=1,
+                            border_mode=4,
+                            value=None,
+                            mask_value=None,
+                        ),
+                        A.OpticalDistortion(
+                            p=0.5,
+                            distort_limit=[-2, 2],
+                            shift_limit=[-0.5, 0.5],
+                            interpolation=1,
+                            border_mode=4,
+                            value=None,
+                            mask_value=None,
+                        ),
+                    ]
+                ),
+                A.ShiftScaleRotate(
+                    p=0.5,
+                    shift_limit=[-0.0625, 0.0625],
+                    scale_limit=[-0.09999999999999998, 0.10000000000000009],
+                    rotate_limit=[-45, 45],
+                    interpolation=1,
+                    border_mode=4,
+                    value=None,
+                    mask_value=None,
+                ),
+                A.Normalize(self.mean, self.std),
+                ToTensorV2(),
+            ]
+        )
+
+    def a_train_transforms_strong_stplusplus(self):
         return A.Compose(
             [
                 # A.RandomScale(scale_limit=(0.5, 2), p=1),

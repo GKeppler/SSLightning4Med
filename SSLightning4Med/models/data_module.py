@@ -84,6 +84,7 @@ class SemiDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size_unlabeled,
                 num_workers=self.num_workers,
                 pin_memory=True,
+                shuffle=True,
             )
             combined_loaders = CombinedLoader(
                 {

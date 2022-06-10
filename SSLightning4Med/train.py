@@ -62,6 +62,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--reliable-id-path", type=str, default=None)
     parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
     parser.add_argument("--wandb-project", type=str, default="SSLightning4Med")
+    parser.add_argument("--lsdf", default=False, help="whether to use the LSDF storage")
     # add model specific args
     parser = LightningModule.add_model_specific_args(parser)
     # add all the availabele trainer options to argparse
@@ -71,14 +72,24 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.method is None:
         raise ValueError("no methodname in model_specific_args specified    .")
     if args.data_root is None:
-        args.data_root = {
-            # "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
-            "melanoma": "/home/kit/stud/uwdus/Masterthesis/data/melanoma256",
-            "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
-            "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
-            "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
-            "brats": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/Brats",
-        }[args.dataset]
+        if args.lsdf:
+            args.data_root = {
+                "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
+                # "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
+                "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
+                "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
+                "brats": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/Brats",
+            }[args.dataset]
+        else:
+            args.data_root = {
+                "melanoma": "/home/kit/stud/uwdus/Masterthesis/data/melanoma256",
+                "breastCancer": "/home/kit/stud/uwdus/Masterthesis/data/breastCancer256",
+                "pneumothorax": "/home/kit/stud/uwdus/Masterthesis/data/pneumothorax",
+                "multiorgan": "/home/kit/stud/uwdus/Masterthesis/data/multiorgan",
+                "brats": "/home/kit/stud/uwdus/Masterthesis/data/brats",
+                "hippocampus": "/home/kit/stud/uwdus/Masterthesis/data/hippocampus",
+                "zebrafish": "/home/kit/stud/uwdus/Masterthesis/data/zebrafish256",
+            }[args.dataset]
 
     if args.epochs is None:
         args.epochs = 100
@@ -214,7 +225,7 @@ def main(args):
         precision=16,
         log_every_n_steps=2,
         # accelerator="cpu",
-        # profiler="simple",
+        profiler="simple",
         # auto_lr_find=True,
         # track_grad_norm=True,
         # detect_anomaly=True,
