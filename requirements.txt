@@ -5,8 +5,14 @@
 albumentations==1.1.0
 click
 einops
+gdown
+
+# dataset download
+kaggle
 MedPy==0.4.0
 pathlib2
+pydicom
 python-dotenv>=0.5.1
 pytorch-lightning==1.5.9
+synapseclient
 wandb==0.12.0

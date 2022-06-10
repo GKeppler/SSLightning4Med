@@ -15,16 +15,12 @@ import tarfile
 import time
 from os import listdir
 from os.path import isfile, join
-from pathlib import Path
-from typing import List
 
 import click
 import cv2
 import gdown
 import numpy as np
 import SimpleITK as sitk
-import yaml
-from sklearn.model_selection import KFold
 
 
 def download_data_from_gdrive(raw_path: str) -> None:
@@ -97,76 +93,6 @@ def unpack(tar_path: str):
     tar.close()
 
 
-def split(base_path: str):
-    """This function splits the data into training and testing data
-
-    Args:
-        base_path (str): Path to the raw images
-    """
-
-    # set basic params and load file list
-    cross_val_splits = 5
-    num_shuffels = 5
-    splits = ["1", "1/4", "1/8", "1/30"]
-    training_filelist: List[str] = []
-    test_filelist: List[str] = []
-    dataset = r"hippocampus"
-    filelist = [f for f in listdir(join(base_path, "images")) if isfile(join(base_path, "images", f))]
-
-    # devide into train and test. Only last patient is test
-    # 10% test data: first  19 subjects of 195 total
-    test_subjects = [f[12:15] for f in filelist]
-    test_subjects = list(set(test_subjects))  # remove duplicates
-    # shuffle list
-    random.shuffle(test_subjects)
-    test_subjects = test_subjects[: len(test_subjects) // 10]
-    training_filelist = [s for s in filelist if s[12:15] not in test_subjects]
-    training_filelist = ["slices/images/%s slices/labels/%s_mask.png" % (f, f[:-4]) for f in training_filelist]
-    test_filelist = [s for s in filelist if s[12:15] in test_subjects]
-    test_filelist = ["slices/images/%s slices/labels/%s_mask.png" % (f, f[:-4]) for f in test_filelist]
-    list_len = len(training_filelist)
-    print(training_filelist[:2])
-
-    # shuffle labeled/unlabeled
-    for shuffle in range(num_shuffels):
-        yaml_dict = {}
-        for split in splits:
-            random.shuffle(training_filelist)
-            # calc splitpoint
-            labeled_splitpoint = int(list_len * float(eval(split)))
-            print(f"splitpoint for {split} in dataset with list_len {list_len} are {labeled_splitpoint}")
-            unlabeled = training_filelist[labeled_splitpoint:]
-            labeled = training_filelist[:labeled_splitpoint]
-            kf = KFold(n_splits=cross_val_splits)
-            count = 0
-            for train_index, val_index in kf.split(labeled):
-                unlabeled_copy = unlabeled.copy()  # or elese it cant be reused
-                train = [labeled[i] for i in train_index]
-                val = [labeled[i] for i in val_index]
-                yaml_dict["val_split_" + str(count)] = dict(unlabeled=unlabeled_copy, labeled=train, val=val)
-                count += 1
-
-            # save to yaml
-            # e.g 1/4 -> 1_4 for folder name
-            zw = list(split)
-            if len(zw) > 1:
-                zw[1] = "_"
-            split = "".join(zw)
-
-            yaml_path = rf"./splits/{dataset}/{split}/split_{shuffle}"
-            Path(yaml_path).mkdir(parents=True, exist_ok=True)
-            with open(yaml_path + "/split.yaml", "w+") as outfile:
-                yaml.dump(yaml_dict, outfile, default_flow_style=False)
-
-    # test yaml file
-    yaml_dict = {}
-    yaml_path = rf"./splits/{dataset}/"
-    Path(yaml_path).mkdir(parents=True, exist_ok=True)
-
-    with open(yaml_path + "/test.yaml", "w+") as outfile:
-        yaml.dump(test_filelist, outfile, default_flow_style=False)
-
-
 @click.command()
 @click.argument(
     "base_path",
@@ -179,7 +105,20 @@ def main(base_path: str):
     unpack(os.path.join(raw_path, "Hippocampus.tar"))
     slices_path = os.path.join(raw_path, os.pardir, "slices")
     slice_images(raw_path, slices_path)
-    # split(slices_path)
+    # split data into train and test
+    filelist = [f for f in listdir(join(base_path, "images")) if isfile(join(base_path, "images", f))]
+    # devide into train and test. Only last patient is test
+    # 10% test data: first  19 subjects of 195 total
+    test_subjects = [f[12:15] for f in filelist]
+    test_subjects = list(set(test_subjects))  # remove duplicates
+    # shuffle list
+    random.shuffle(test_subjects)
+    test_subjects = test_subjects[: len(test_subjects) // 10]
+    training_filelist = [s for s in filelist if s[12:15] not in test_subjects]
+    training_filelist = ["slices/images/%s slices/labels/%s_mask.png" % (f, f[:-4]) for f in training_filelist]
+    test_filelist = [s for s in filelist if s[12:15] in test_subjects]
+    test_filelist = ["slices/images/%s slices/labels/%s_mask.png" % (f, f[:-4]) for f in test_filelist]
+    # split("hippocampus", training_filelist, test_filelist)
 
 
 if __name__ == "__main__":
