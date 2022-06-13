@@ -35,8 +35,8 @@ class BaseModule(pl.LightningModule):
         """
         A rule of thumb here is to double the learning rate as you double the batch size.
         """
-        parser.add_argument("--lr", type=float, default=0.1)
-        parser.add_argument("--optimizer", type=str, default="SGD", choices=["SGD", "AdamWOneCycle", "Adam"])
+        parser.add_argument("--lr", type=float, default=0.001)
+        parser.add_argument("--optimizer", type=str, default="Adam", choices=["SGD", "AdamWOneCycle", "Adam"])
         parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
         parser.add_argument(
             "--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher", "FixMatch"]
