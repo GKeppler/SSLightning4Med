@@ -178,7 +178,7 @@ def main(args):
     dataModule.val_transforms = augs.a_val_transforms()
     dataModule.train_transforms = augs.a_train_transforms_weak()
     dataModule.train_transforms_unlabeled = (
-        augs.a_train_transforms_strong()
+        augs.a_train_transforms_strong_stplusplus()
         if args.method == "St++" or args.method == "Fixmatch"
         else augs.a_train_transforms_weak()
     )
