@@ -1,5 +1,4 @@
 import os
-import traceback
 from argparse import ArgumentParser
 from typing import Any
 
@@ -253,14 +252,15 @@ def main(args):
 if __name__ == "__main__":
     args = base_parse_args(BaseModule)
     # pront exception to be logged in wandb
-    if args.use_wandb:
-        try:
-            main(args)
-        except Exception as e:
-            # exit gracefully, so wandb logs the problem
-            print(traceback.print_exc(), e)
-            exit(1)
-        finally:
-            wandb.finish()
-    else:
-        main(args)
+    # if args.use_wandb:
+    #     try:
+    #         main(args)
+    #     except Exception as e:
+    #         # exit gracefully, so wandb logs the problem
+    #         wandb.log({"error1": traceback.print_exc(),"error2": e})
+    #         print(traceback.print_exc(), e)
+    #         exit(1)
+    #     finally:
+    #         wandb.finish()
+    # else:
+    main(args)

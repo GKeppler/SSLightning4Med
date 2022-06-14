@@ -132,7 +132,7 @@ class STPlusPlusModule(BaseModule):
         trainer.fit(model=model, datamodule=dataModule)
 
         # <====================== Test supervised model on testset (SupOnly) ======================>
-        trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+        # trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
         if not args.plus:
             # <============================= Pseudolabel all unlabeled images =============================>
