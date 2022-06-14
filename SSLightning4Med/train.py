@@ -191,6 +191,12 @@ def main(args):
         mode="max",
         save_weights_only=True,
     )
+    checkpoint_callback2 = ModelCheckpoint(
+        dirpath=os.path.join("./", f"{args.save_path}"),
+        filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.3f}",
+        mode="max",
+        save_weights_only=True,
+    )
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
@@ -212,7 +218,7 @@ def main(args):
 
     # define Trainer
     dev_run = False  # not working when predicting with best_model checkpoint
-    callbacks = [checkpoint_callback, lr_monitor]
+    callbacks = [checkpoint_callback, checkpoint_callback2, lr_monitor]
     if args.early_stopping:
         callbacks.append(early_stopping)
     trainer = pl.Trainer.from_argparse_args(
