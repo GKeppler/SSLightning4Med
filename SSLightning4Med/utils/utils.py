@@ -7,7 +7,6 @@ import torchvision
 from medpy import metric
 from numpy import ndarray
 from torch import Tensor, argmax, tensor
-from wandb.sdk.data_types import Image
 
 import wandb
 from SSLightning4Med.utils import ramps
@@ -137,7 +136,7 @@ def tensorboard_image_grid(pred: Tensor, color_map: ndarray) -> None:
     # self.logger.experiment.add_image('generated_images', grid, trainer.global_step)
 
 
-def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21) -> Image:
+def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21):
     class_labeles = dict((el, "something") for el in list(range(nclass)))
     class_labeles.update({0: "nothing"})
     return wandb.Image(

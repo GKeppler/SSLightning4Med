@@ -26,7 +26,7 @@ repos:
     hooks:
       - id: flake8
         language_version: python3
-        args: ["--ignore=F841,E203"]
+        args: ["--ignore=F841,E203,E265"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
