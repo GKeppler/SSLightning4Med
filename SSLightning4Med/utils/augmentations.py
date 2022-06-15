@@ -18,14 +18,13 @@ class Augmentations:
             "zebrafish": ([0.5129, 0.5012, 0.5181], [0.2336, 0.2362, 0.2552]),
         }[args.dataset]
 
+    # these are the standard st++ augmentations
     def a_train_transforms_weak(self):
         return A.Compose(
             [
-                A.RandomScale(scale_limit=(0.5, 2), p=1),
+                A.RandomScale(scale_limit=(-0.5, 1), p=1),
                 A.PadIfNeeded(self.args.crop_size, self.args.crop_size),
                 A.RandomCrop(self.args.crop_size, self.args.crop_size),
-                # A.SmallestMaxSize(self.args.crop_size),
-                # A.CenterCrop(self.args.crop_size, self.args.crop_size),
                 A.HorizontalFlip(p=0.5),
                 A.Normalize(self.mean, self.std),
                 ToTensorV2(),
@@ -97,18 +96,19 @@ class Augmentations:
             ]
         )
 
+    # except random grayscale
     def a_train_transforms_strong_stplusplus(self):
         return A.Compose(
             [
-                A.RandomScale(scale_limit=(0.5, 2), p=1),
+                A.RandomScale(scale_limit=(-0.5, 1), p=1),
                 A.PadIfNeeded(self.args.crop_size, self.args.crop_size),
                 A.RandomCrop(self.args.crop_size, self.args.crop_size),
                 A.HorizontalFlip(p=0.5),
                 # A.SmallestMaxSize(self.args.crop_size),
                 # A.RandomScale(scale_limit=(1, 2), p=1),
                 # A.CenterCrop(self.args.crop_size, self.args.crop_size),
-                A.GaussianBlur(p=0.5),
                 A.ColorJitter(p=0.8),
+                A.GaussianBlur(p=0.5),
                 A.CoarseDropout(p=0.5),  # cutout
                 A.Normalize(self.mean, self.std),
                 ToTensorV2(),
