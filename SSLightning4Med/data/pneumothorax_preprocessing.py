@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 import cv2
+import dotenv
 import kaggle
 import numpy as np
 import pandas as pd
@@ -120,6 +121,9 @@ def main(base_path: str):
         handlers=[logging.FileHandler(os.path.join(base_path, "download.log")), logging.StreamHandler(sys.stdout)],
     )
     logging.info("Starting download")
+    project_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+    dotenv_path = os.path.join(project_dir, ".env")
+    dotenv.load_dotenv(dotenv_path)
     kaggle.api.authenticate()
     kaggle.api.dataset_download_files(
         "jesperdramsch/siim-acr-pneumothorax-segmentation-data", path=base_path, unzip=True

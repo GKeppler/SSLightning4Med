@@ -136,7 +136,9 @@ def main(base_path: str):
     slice_images(raw_path, slices_path)
 
     # split into training and testing
-    filelist = [f for f in listdir(join(base_path, "images")) if isfile(join(base_path, "images", f))]
+    filelist = [
+        f for f in listdir(join(base_path, "slices", "images")) if isfile(join(base_path, "slices", "images", f))
+    ]
 
     # devide into train and test. Only last patient is test
     test_subjects = ["img" + str(s).zfill(4) for s in list(range(37, 41))]  # 10% test data

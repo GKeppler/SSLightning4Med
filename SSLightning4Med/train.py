@@ -2,7 +2,6 @@ import os
 from argparse import ArgumentParser
 from typing import Any
 
-import dotenv
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
@@ -212,10 +211,6 @@ def main(args):
     )
 
     if args.use_wandb:
-        project_dir = os.path.join(os.path.dirname(__file__), os.pardir)
-        dotenv_path = os.path.join(project_dir, ".env")
-        # KAGGLE_USERNAME & KAGGLE_KEY must be set in .env file!!!
-        dotenv.load_dotenv(dotenv_path)
         wandb.finish()
         # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
         wandb.init(project=args.wandb_project, entity="gkeppler")
