@@ -2,6 +2,7 @@ import os
 from argparse import ArgumentParser
 from typing import Any
 
+import dotenv
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
@@ -61,7 +62,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--reliable-id-path", type=str, default=None)
     parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
     parser.add_argument("--wandb-project", type=str, default="SSLightning4Med")
-    parser.add_argument("--lsdf", default=False, help="whether to use the LSDF storage")
+    parser.add_argument("--lsdf", default=True, help="whether to use the LSDF storage")
     # add model specific args
     parser = LightningModule.add_model_specific_args(parser)
     # add all the availabele trainer options to argparse
@@ -73,11 +74,13 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     if args.data_root is None:
         if args.lsdf:
             args.data_root = {
-                "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/ISIC_Demo_2017_cropped",
-                # "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/BreastCancer_cropped",
-                "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/SIIM_Pneumothorax_seg",
-                "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/MultiOrgan",
-                "brats": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/Brats",
+                "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/melanoma256",
+                "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/breastCancer256",
+                "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/pneumothorax",
+                "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/multiorgan",
+                "brats": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/brats",
+                "hippocampus": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/hippocampus",
+                "zebrafish": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/zebrafish256",
             }[args.dataset]
         else:
             args.data_root = {
@@ -209,6 +212,10 @@ def main(args):
     )
 
     if args.use_wandb:
+        project_dir = os.path.join(os.path.dirname(__file__), os.pardir)
+        dotenv_path = os.path.join(project_dir, ".env")
+        # KAGGLE_USERNAME & KAGGLE_KEY must be set in .env file!!!
+        dotenv.load_dotenv(dotenv_path)
         wandb.finish()
         # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
         wandb.init(project=args.wandb_project, entity="gkeppler")

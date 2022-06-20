@@ -45,7 +45,7 @@ def download_zip(url, filename):
 @click.argument(
     "base_path",
     type=click.Path(),
-    default="/home/kit/stud/uwdus/Masterthesis/data/melanoma",  # /home/kit/stud/uwdus/Masterthesis/data/melanoma",
+    default="/home/kit/stud/uwdus/Masterthesis/data/melanoma",  # /home/gustav/datasets/melanoma",
 )
 def main(base_path: str):
     Path(base_path).mkdir(parents=True, exist_ok=True)
