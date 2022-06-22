@@ -38,8 +38,8 @@ def main(args):
     )
 
     dataModule.val_transforms = augs.a_val_transforms()
-    # get filenames at dirpath os.path.join("./", f"{args.save_path}"),
-    files = glob(os.path.join("./", f"{args.save_path}", "*.ckpt"))
+    # get filenames at dirpath os.path.join(f"{args.save_path}"),
+    files = glob(os.path.join(f"{args.save_path}", "*.ckpt"))
     # get checkpoint with highest val_mIoU
     max_mIoU = max([float(f.split("val_mIoU")[-1][1:5]) for f in files])
     max_mIoU_file = [f for f in files if float(f.split("val_mIoU")[-1][1:5]) == max_mIoU][0]
