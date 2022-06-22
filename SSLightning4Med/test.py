@@ -78,8 +78,8 @@ def main(args):
         # "Bolt": BoltModule,
     }[args.method]
     model = module(args)
-    trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_mIoU_file))
     trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_epoch_file))
+    trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_mIoU_file))
 
 
 if __name__ == "__main__":
