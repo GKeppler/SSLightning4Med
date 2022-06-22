@@ -1,6 +1,7 @@
 """
 This script downlaods metrics from Wandb, plots them, produces a latex table and saves results in a CSV
 """
+#%%
 import os
 from typing import Dict
 
@@ -9,20 +10,21 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-#%%
 from scipy.integrate import quad
 from scipy.interpolate import UnivariateSpline, interp1d
 
 import wandb
 
+matplotlib.rcParams["mathtext.fontset"] = "stix"
+matplotlib.rcParams["font.family"] = "STIXGeneral"
+
 #%%
 # Project is specified by <entity/project-name>
-project_name = "test2"
+project_name = "SSLightning4Med"
 # most important filters are: "display_name", "sweep" in combination with or:
 
 # Zebrafish
-name = "Early-Stopping and best-checkpoint"
+name = "heureka CCT"
 filters = {
     "Early-Stopping and best-checkpoint": {
         # "$or": [{"state": "finished"}, {"state": "crashed"}],
@@ -34,6 +36,7 @@ filters = {
     "Supervised all": {
         "sweep": "s6s9lkos",
     },
+    "heureka CCT": {"$or": [{"sweep": "9w5n97fs"}, {"sweep": "t7yc3a60"}, {"sweep": "tizubuhc"}]},
 }
 # download data
 api = wandb.Api()
@@ -78,10 +81,10 @@ metric_dict = {
     "mean Average Surface Distance": "test medpy_asd",
     "mean Hausdorff Distance": "test medpy_hd",
 }  # "test mDICE"#"test mIOU"
-
-matplotlib.rcParams["mathtext.fontset"] = "stix"
-matplotlib.rcParams["font.family"] = "STIXGeneral"
-
+#%%
+# drop duplicates
+df = all_df.copy()
+all_df = all_df.loc[all_df[["split", "dataset", "method", "shuffle"]].drop_duplicates(inplace=False).index, :]
 #%%
 # methods comparison
 prep_df = all_df
@@ -137,7 +140,7 @@ prep_df = all_df
 # prep_df = prep_df[prep_df["dataset"] == "melanoma"]
 metric_name = "mean DSC"
 metric = metric_dict[metric_name]
-
+check_df = pd.DataFrame()
 f, axes = plt.subplots(2, 3, figsize=(12, 6))
 # remove spacing between subplots
 plt.subplots_adjust(wspace=0.4, hspace=0.4)
@@ -150,10 +153,12 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
         metric,
     ]
     method_df = prep_df[columns].groupby(["method", "split"]).agg([np.mean, np.std, np.count_nonzero])
+    # if an entry of count_nonzero is not 5, print the dataset name:
+
     method_df.dropna(axis=0, how="all", inplace=True)
     columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
     method_df.head()
-
+    check_df = check_df.append(method_df[("test medpy_dc", "count_nonzero")].rename(dataset_name))
     # draw figure
     # fig, axes = plt.subplots()
     ax = axes[i // 3, i % 3]
@@ -186,7 +191,7 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
     plt.savefig(
         f"figures/{project_name}_{name}_{metric}_dataset_comparison.pdf", transparent=False, bbox_inches="tight"
     )
-
+    print(check_df)
 # %%
 # a graph about the meanIou and trainer/global_step of the different methods
 
@@ -349,14 +354,18 @@ print(spl2.integral(0.0333, 1) / 0.96669)
 for i, xi in enumerate(x):
     plt.plot([xi, xi], [0, y[i]], "k--")
     # add label to x-axis
-    plt.text(xi, -0.04, comb_df["split"].iloc[i], ha="center", va="bottom")
+    # plt.text(xi, -0.04, comb_df["split"].iloc[i], ha="center", va="bottom")
 xs = np.linspace(0.0333, 1, 1000)
 plt.plot(xs, spl2(xs), "g", lw=3)
 f = interp1d(x, y)
 xs = np.linspace(0.03334, 1, 1000)
 plt.plot(xs, f(xs), "b", lw=3)
 plt.plot(x, y, "ro", ms=5)
-plt.xlabel("Split labeled/total")
-plt.ylabel("Metric")
-plt.savefig("metric_interpolation.png", pad_inches=0, bbox_inches="tight", transparent=True, dpi=300)
+# Gamma as greek symbol in x lable
+plt.xlabel(r"Splitratio $\Gamma$")
+# text with unterscore Q_p
+plt.ylabel(r"Metric $Q_p$")
+# horizontal line at 0.5
+plt.plot([0.03, 1], [0.0, 0.0], "k--")
+plt.savefig("metric_interpolation.pdf", pad_inches=0, bbox_inches="tight", transparent=True, dpi=300)
 # %%

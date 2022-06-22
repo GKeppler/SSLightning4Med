@@ -106,7 +106,9 @@ def main(base_path: str):
     slices_path = os.path.join(raw_path, os.pardir, "slices")
     slice_images(raw_path, slices_path)
     # split data into train and test
-    filelist = [f for f in listdir(join(base_path, "images")) if isfile(join(base_path, "images", f))]
+    filelist = [
+        f for f in listdir(join(base_path, "slices", "images")) if isfile(join(base_path, "slices", "images", f))
+    ]
     # devide into train and test. Only last patient is test
     # 10% test data: first  19 subjects of 195 total
     test_subjects = [f[12:15] for f in filelist]

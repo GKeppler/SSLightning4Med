@@ -14,4 +14,4 @@ python SSLightning4Med/data/melanoma_preprocessing.py $DATASET_PATH/melanoma/
 python SSLightning4Med/data/pneumothorax_preprocessing.py $DATASET_PATH/pneumothorax/
 python SSLightning4Med/data/multi_organ_data_processing.py $DATASET_PATH/multiorgan/
 python SSLightning4Med/data/breast_cancer_preprocessing.py $DATASET_PATH/breastCancer/
-python SSLightning4Med/data/splits/hippocampus_splits.py $DATASET_PATH/hippocampus/
+python SSLightning4Med/data/hippocampus_data_processing.py $DATASET_PATH/hippocampus/
