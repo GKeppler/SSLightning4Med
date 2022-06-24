@@ -39,12 +39,6 @@ def main(args):
 
     dataModule.val_transforms = augs.a_val_transforms()
     # get filenames at dirpath os.path.join(f"{args.save_path}"),
-    files = glob(os.path.join(f"{args.save_path}", "*.ckpt"))
-    # get checkpoint with highest val_mIoU
-    max_mIoU = max([float(f.split("val_mIoU")[-1][1:5]) for f in files])
-    max_mIoU_file = [f for f in files if float(f.split("val_mIoU")[-1][1:5]) == max_mIoU][0]
-    max_epoch = max([int(f.split("epoch")[-1].split("-")[0][1:]) for f in files])
-    max_epoch_file = [f for f in files if int(f.split("epoch")[-1].split("-")[0][1:]) == max_epoch][0]
 
     # load checkpoint with highest val_mIoU
 
@@ -54,31 +48,39 @@ def main(args):
         wandb_logger = WandbLogger(project=args.wandb_project)
         wandb.config.update(args)
 
-    trainer = pl.Trainer.from_argparse_args(
-        args,
-        logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-        gpus=[0],
-        precision=16,
-        log_every_n_steps=2,
-        # accelerator="cpu",
-        # profiler="simple",
-        # auto_lr_find=True,
-        # track_grad_norm=True,
-        # detect_anomaly=True,
-        # overfit_batches=1,
-    )
-    # define Module based on methods
-    module = {
-        "St++": STPlusPlusModule,
-        "CCT": CCTModule,
-        "Supervised": SupervisedModule,
-        "MeanTeacher": MeanTeacherModule,
-        "FixMatch": FixmatchModule,
-        # "Bolt": BoltModule,
-    }[args.method]
-    model = module(args)
-    trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_epoch_file))
-    trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_mIoU_file))
+    files = glob(os.path.join(f"{args.save_path}", "*.ckpt"))
+    # get checkpoint with highest val_mIoU
+    if len(files) != 0:
+        max_mIoU = max([float(f.split("val_mIoU")[-1][1:5]) for f in files])
+        max_mIoU_file = [f for f in files if float(f.split("val_mIoU")[-1][1:5]) == max_mIoU][0]
+        max_epoch = max([int(f.split("epoch")[-1].split("-")[0][1:]) for f in files])
+        max_epoch_file = [f for f in files if int(f.split("epoch")[-1].split("-")[0][1:]) == max_epoch][0]
+
+        trainer = pl.Trainer.from_argparse_args(
+            args,
+            logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
+            gpus=[0],
+            precision=16,
+            log_every_n_steps=2,
+            # accelerator="cpu",
+            # profiler="simple",
+            # auto_lr_find=True,
+            # track_grad_norm=True,
+            # detect_anomaly=True,
+            # overfit_batches=1,
+        )
+        # define Module based on methods
+        module = {
+            "St++": STPlusPlusModule,
+            "CCT": CCTModule,
+            "Supervised": SupervisedModule,
+            "MeanTeacher": MeanTeacherModule,
+            "FixMatch": FixmatchModule,
+            # "Bolt": BoltModule,
+        }[args.method]
+        model = module(args)
+        trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_epoch_file))
+        trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_mIoU_file))
 
 
 if __name__ == "__main__":
