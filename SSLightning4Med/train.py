@@ -152,9 +152,9 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         args.reliable_id_path = f"{args.data_root}/reliable_ids/{args.method}/{args.split}/split_{args.shuffle}"
 
     if not os.path.exists(args.save_path):
-        os.makedirs(args.save_path)
+        os.makedirs(args.save_path, exist_ok=True)
     if not os.path.exists(args.pseudo_mask_path):
-        os.makedirs(args.pseudo_mask_path)
+        os.makedirs(args.pseudo_mask_path, exist_ok=True)
     return args
 
 
@@ -187,13 +187,13 @@ def main(args):
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
         monitor="val_mIoU",
-        dirpath=os.path.join("./", f"{args.save_path}"),
+        dirpath=os.path.join(f"{args.save_path}"),
         filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.3f}",
         mode="max",
         save_weights_only=True,
     )
     checkpoint_callback2 = ModelCheckpoint(
-        dirpath=os.path.join("./", f"{args.save_path}"),
+        dirpath=os.path.join(f"{args.save_path}"),
         filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.3f}",
         mode="max",
         save_weights_only=True,
@@ -211,9 +211,6 @@ def main(args):
     )
 
     if args.use_wandb:
-        wandb.finish()
-        # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
-        wandb.init(project=args.wandb_project, entity="gkeppler")
         wandb_logger = WandbLogger(project=args.wandb_project)
         wandb.config.update(args)
 

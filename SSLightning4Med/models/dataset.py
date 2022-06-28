@@ -57,7 +57,7 @@ class BaseDataset:
         # Read an image with OpenCV
         image = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
         if image is None:
-            raise ValueError("No image loaded. Check Dataset.")
+            raise ValueError(f"No image loaded. Check Dataset. id: {id}")
         # By default OpenCV uses BGR color space for color images,
         # so we need to convert the image to RGB color space.
 
