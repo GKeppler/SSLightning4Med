@@ -24,7 +24,7 @@ project_name = "SSLightning4Med"
 # most important filters are: "display_name", "sweep" in combination with or:
 
 # Zebrafish
-name = "heureka CCT"
+name = "test all"
 filters = {
     "Early-Stopping and best-checkpoint": {
         # "$or": [{"state": "finished"}, {"state": "crashed"}],
@@ -37,6 +37,7 @@ filters = {
         "sweep": "s6s9lkos",
     },
     "heureka CCT": {"$or": [{"sweep": "9w5n97fs"}, {"sweep": "t7yc3a60"}, {"sweep": "tizubuhc"}]},
+    "test all": {"$or": [{"sweep": "xqffwt68"}, {"sweep": "t7yc3a60"}, {"sweep": "v24zcssb"}]},
 }
 # download data
 api = wandb.Api()
@@ -81,6 +82,21 @@ metric_dict = {
     "mean Average Surface Distance": "test medpy_asd",
     "mean Hausdorff Distance": "test medpy_hd",
 }  # "test mDICE"#"test mIOU"
+#%%
+# get earlier values:
+# the first entry in "test medpy_dc" is the test value computed with the checkpoint from the last epoch
+metrics = ["test medpy_dc"]
+list_metrics = []
+for i, run in enumerate(runs):
+    for j, row in run.history(keys=metrics).iterrows():
+        # get only first elements of history -> supervised metric
+        row.name = i
+        list_metrics.append(row)
+        break
+late_epoch_df = pd.DataFrame(list_metrics).add_suffix(" lastepoch")
+# merge with all_df
+all_df = pd.concat([all_df, late_epoch_df], axis=1)
+
 #%%
 # drop duplicates
 df = all_df.copy()
@@ -184,14 +200,16 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
     ax.set_xlabel("Split")
     ax.set_ylabel(metric_name)
     ax.title.set_text(dataset_name)
-    plt.legend()
-    if not os.path.exists("figures"):
-        os.makedirs("figures")
-    dataset = prep_df["dataset"].iloc[0]
-    plt.savefig(
-        f"figures/{project_name}_{name}_{metric}_dataset_comparison.pdf", transparent=False, bbox_inches="tight"
-    )
-    print(check_df)
+    # disable axis legend
+    ax.get_legend().remove()
+    # plt.legend()
+    # legend without overlap to axes
+plt.legend(loc="upper left", bbox_to_anchor=(1, 2.5), ncol=1, title="Methods")
+
+if not os.path.exists("figures"):
+    os.makedirs("figures")
+plt.savefig(f"figures/{project_name}_{name}_{metric}_dataset_comparison.pdf", transparent=False, bbox_inches="tight")
+print(check_df)
 # %%
 # a graph about the meanIou and trainer/global_step of the different methods
 
@@ -310,41 +328,52 @@ plt.savefig(f"{project_name}_metrics.pdf", transparent=False, bbox_inches="tight
 #%%
 # calculate interpolated integral for each plot
 # reduce all splits to one value
-metric = "test medpy_dc"
-method = "MeanTeacher"
-columns = ["split", metric]
-sup_df = all_df[all_df["method"] == "Supervised"]
-sup_df = sup_df[sup_df["split"] == "1"]
-method_df = all_df[all_df["method"] == method]
-# combine both dataframes
-comb_df = pd.concat([sup_df, method_df], axis=0)
-comb_df = comb_df[columns].groupby("split").agg([np.mean, np.std, np.count_nonzero])
-comb_df.columns = ["".join(col) for col in comb_df.columns]
-comb_df = comb_df.reset_index()[["split", metric + "mean"]]
-comb_df["split_value"] = (
-    comb_df["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
-)
-comb_df = comb_df.sort_values("split_value")
-x, y = comb_df["split_value"].values, comb_df[metric + "mean"].values
-# make spline derivative ~0.0 at end of x
-# x = np.append(x, 1.1)
-# y = np.append(y, y[-1])
-spl = UnivariateSpline(x, y, k=3)
-plt.plot(x, y, "ro", ms=5)
-xs = np.linspace(0.03334, 1, 1000)
-plt.plot(xs, spl(xs), "b", lw=3)
-print("The Integral is: ", spl.integral(0.0333, 1) / 0.96669)
+methods_list = ["MeanTeacher", "St++", "FixMatch", "CCT", "Supervised"]
+combined_df = pd.DataFrame()
+for dataset_name, prep_df in all_df.groupby("dataset"):
+    for method in methods_list:
+        metric = "test medpy_dc"  # "test medpy_dc lastepoch"
+        columns = ["split", metric]
+        sup_df = prep_df[prep_df["method"] == "Supervised"]
+        sup_df = sup_df[sup_df["split"] == "1"]
+        method_df = prep_df[prep_df["method"] == method]
+        # combine both dataframes
+        comb_df = pd.concat([sup_df, method_df], axis=0)
+        comb_df = comb_df[columns].groupby("split").agg([np.mean, np.std, np.count_nonzero])
+        comb_df.columns = ["".join(col) for col in comb_df.columns]
+        comb_df = comb_df.reset_index()[["split", metric + "mean"]]
+        comb_df["split_value"] = (
+            comb_df["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
+        )
+        comb_df = comb_df.sort_values("split_value")
+        x, y = comb_df["split_value"].values, comb_df[metric + "mean"].values
+        # make spline derivative ~0.0 at end of x
+        # x = np.append(x, 1.1)
+        # y = np.append(y, y[-1])
+        # spl = UnivariateSpline(x, y, k=3)
+        # plt.plot(x, y, "ro", ms=5)
+        # xs = np.linspace(0.03334, 1, 1000)
+        # plt.plot(xs, spl(xs), "b", lw=3)
+        # print("The qubic Integral is: ", spl.integral(0.0333, 1) / comb_df["test medpy_dcmean"].iloc[-1])
 
-# linear interpolation
-f = interp1d(x, y)
-plt.plot(x, y, "ro", ms=5)
-xs = np.linspace(0.03334, 1, 1000)
-plt.plot(xs, f(xs), "g", lw=3)
-# set x axit description
-plt.xlabel("Split")
-plt.ylabel(metric)
-print(quad(f, 0.0334, 1)[0] / 0.96669)
-
+        # # linear interpolation
+        try:
+            f = interp1d(x, y)
+        except Exception as e:
+            print(e)
+            continue
+        # plt.plot(x, y, "ro", ms=5)
+        # xs = np.linspace(0.03334, 1, 1000)
+        # plt.plot(xs, f(xs), "g", lw=3)
+        # # set x axit description
+        # plt.xlabel("Split")
+        # plt.ylabel(metric)
+        # print("Linear interpoaltion: ",quad(f, 0.0334, 1)[0] / comb_df["test medpy_dcmean"].iloc[-1])
+        val = quad(f, 0.0334, 1)[0] / comb_df[metric + "mean"].iloc[-1] * 100
+        combined_df.loc[method, dataset_name] = f"{val:.2f}"
+combined_df
+#%%
+print(combined_df.to_latex())
 # %%
 x, y = np.array([0.0333, 0.125, 0.25, 1]), np.array([0.3, 0.55, 0.74, 0.8])
 spl2 = UnivariateSpline(x, y, k=3)
