@@ -211,6 +211,7 @@ def main(args):
     )
 
     if args.use_wandb:
+        wandb.init(project=args.wandb_project, entity="gkeppler")
         wandb_logger = WandbLogger(project=args.wandb_project)
         wandb.config.update(args)
 
