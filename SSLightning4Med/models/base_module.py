@@ -108,6 +108,7 @@ class BaseModule(pl.LightningModule):
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
         return wandb_image_mask(img, mask, pred, self.n_class)
 
+    # for 3D-testing: https://github.com/HiLab-git/SSL4MIS/blob/master/code/test_2D_fully.py
     def test_epoch_end(self, outputs) -> None:  # type: ignore
         overall_acc, meanIOU, meanDSC, medpy_dc, medpy_jc, medpy_hd, medpy_asd = self.test_metrics.evaluate()
         self.log("test overall_acc", overall_acc)

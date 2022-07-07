@@ -102,7 +102,7 @@ class STPlusPlusModule(BaseModule):
                 ).to(device=self.device)
                 mIOU.append(metric(preds[i].to(device=self.device), preds[-1].to(device=self.device)))
             reliability = sum(mIOU) / len(mIOU)
-            self.id_to_reliability.append((id[0], reliability))
+            self.id_to_reliability.append((id[0], reliability.cpu().item()))
 
     def on_predict_epoch_end(self, results: List[Any]) -> None:
         if self.mode == "select_reliable":

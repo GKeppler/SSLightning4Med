@@ -44,7 +44,7 @@ def main(args):
 
     if args.use_wandb:
         # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
-        # wandb.init(project=args.wandb_project, entity="gkeppler")
+        wandb.init(project=args.wandb_project, entity="gkeppler")
         wandb_logger = WandbLogger(project=args.wandb_project)
         wandb.config.update(args)
 
