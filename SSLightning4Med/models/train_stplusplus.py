@@ -104,11 +104,13 @@ class STPlusPlusModule(BaseModule):
     def on_predict_epoch_end(self, results: List[Any]) -> None:
         if self.mode == "select_reliable":
             labeled_ids = []
+            val_ids = []
             with open(self.args.split_file_path, "r") as file:
                 split_dict = yaml.load(file, Loader=yaml.FullLoader)
                 labeled_ids = split_dict[self.args.val_split]["labeled"]
-                val_ids = labeled_ids = split_dict[self.args.val_split]["val"]
+                val_ids = split_dict[self.args.val_split]["val"]
 
+            self.id_to_reliability.sort(key=lambda elem: elem[1], reverse=True)
             yaml_dict = dict()
             yaml_dict[self.args.val_split] = dict(
                 val=val_ids,
@@ -153,6 +155,7 @@ class STPlusPlusModule(BaseModule):
             trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
             # <================================ Pseudo label reliable images =================================>
             dataModule.split_yaml_path = os.path.join(args.reliable_id_path, "reliable_ids.yaml")
+            dataModule.setup_split()
             model.mode = "label"
             trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
             # <================================== The 1st stage re-training ==================================>
@@ -166,6 +169,7 @@ class STPlusPlusModule(BaseModule):
             # <=============================== Pseudo label all images ================================>
 
             dataModule.split_yaml_path = args.split_file_path
+            dataModule.setup_split()
             model.mode = "label"
             trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 

@@ -35,9 +35,12 @@ class SemiDataModule(pl.LightningDataModule):
         self.color_map = color_map
         self.mode = mode
         self.num_workers = num_workers
+        self.setup_split()
+
+    def setup_split(self):
         with open(self.split_yaml_path, "r") as file:
             split_dict = yaml.load(file, Loader=yaml.FullLoader)
-        self.train_id_dict = split_dict["val_split_0"]
+            self.train_id_dict = split_dict["val_split_0"]
         # testset
         with open(self.test_yaml_path, "r") as file:
             self.test_id_list = yaml.load(file, Loader=yaml.FullLoader)

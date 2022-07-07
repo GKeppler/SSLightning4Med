@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 import wandb
 from SSLightning4Med.models.base_module import BaseModule
+from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.models.transform import (  # to_polar,; to_cart,
     blur,
     crop,
@@ -27,7 +28,8 @@ from SSLightning4Med.models.transform import (  # to_polar,; to_cart,
 )
 from SSLightning4Med.nets.unet import UNet, small_UNet
 from SSLightning4Med.train import base_parse_args
-from SSLightning4Med.utils.utils import mulitmetrics
+from SSLightning4Med.utils.augmentations import Augmentations
+from SSLightning4Med.utils.utils import get_color_map, mulitmetrics
 
 MODE = None
 global step_train
@@ -41,16 +43,31 @@ def main(args):
         wandb.init(project=args.wandb_project, entity="gkeppler")
         wandb.config.update(args)
 
-    criterion = CrossEntropyLoss(ignore_index=255)
-    valset = SemiDataset(args.dataset, args.data_root, "val", args.crop_size, args.split_file_path)
-    valloader = DataLoader(
-        valset,
-        batch_size=4 if args.dataset == "cityscapes" else 1,
-        shuffle=False,
-        pin_memory=True,
-        num_workers=4,
-        drop_last=False,
+    augs = Augmentations(args)
+    color_map = get_color_map(args.dataset)
+    dataModule = SemiDataModule(
+        root_dir=args.data_root,
+        batch_size=args.batch_size,
+        batch_size_unlabeled=args.batch_size_unlabeled,
+        split_yaml_path=args.split_file_path,
+        test_yaml_path=args.test_file_path,
+        pseudo_mask_path=args.pseudo_mask_path,
+        mode="train",
+        color_map=color_map,
+        num_workers=args.n_workers,
     )
+
+    criterion = CrossEntropyLoss(ignore_index=255)
+    # valset = SemiDataset(args.dataset, args.data_root, "val", args.crop_size, args.split_file_path)
+    # valloader = DataLoader(
+    #     valset,
+    #     batch_size=4 if args.dataset == "cityscapes" else 1,
+    #     shuffle=False,
+    #     pin_memory=True,
+    #     num_workers=4,
+    #     drop_last=False,
+    # )
+    valloader = dataModule.val_dataloader()
 
     # <====================== Supervised training with labeled images (SupOnly) ======================>
     print(
@@ -61,16 +78,17 @@ def main(args):
     global MODE
     MODE = "train"
 
-    trainset = SemiDataset(args.dataset, args.data_root, MODE, args.crop_size, args.split_file_path)
-    trainset.ids = 2 * trainset.ids if len(trainset.ids) < 200 else trainset.ids
-    trainloader = DataLoader(
-        trainset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        pin_memory=True,
-        num_workers=args.n_workers,
-        drop_last=True,
-    )  # ,sampler=torch.utils.data.SubsetRandomSampler(subset_indices))
+    # trainset = SemiDataset(args.dataset, args.data_root, MODE, args.crop_size, args.split_file_path)
+    # trainset.ids = 2 * trainset.ids if len(trainset.ids) < 200 else trainset.ids
+    # trainloader = DataLoader(
+    #     trainset,
+    #     batch_size=args.batch_size,
+    #     shuffle=True,
+    #     pin_memory=True,
+    #     num_workers=args.n_workers,
+    #     drop_last=True,
+    # )  # ,sampler=torch.utils.data.SubsetRandomSampler(subset_indices))
+    trainloader = dataModule.train_dataloader()
 
     model, optimizer = init_basic_elems(args)
     print("\nParams: %.1fM" % count_params(model))
@@ -79,9 +97,9 @@ def main(args):
 
     # <====================== Test supervised model on testset (SupOnly) ======================>
     print("\n\n\n================> Test supervised model on testset (SupOnly)")
-    testset = SemiDataset(args.dataset, args.data_root, "test", args.crop_size, args.test_file_path)
-    testloader = DataLoader(testset, 1, shuffle=False, pin_memory=True, num_workers=4, drop_last=False)
-
+    # testset = SemiDataset(args.dataset, args.data_root, "test", args.crop_size, args.test_file_path)
+    # testloader = DataLoader(testset, 1, shuffle=False, pin_memory=True, num_workers=4, drop_last=False)
+    testloader = dataModule.test_dataloader()
     test(best_model, testloader, args)
 
     """
@@ -100,7 +118,6 @@ def main(args):
             num_workers=4,
             drop_last=False,
         )
-
         label(best_model, dataloader, args)
 
         # <======================== Re-training on labeled and unlabeled images ========================>
@@ -142,15 +159,16 @@ def main(args):
     # <===================================== Select Reliable IDs =====================================>
     print("\n\n\n================> Total stage 2/6: Select reliable images for the 1st stage re-training")
 
-    dataset = SemiDataset(args.dataset, args.data_root, "label", args.crop_size, args.split_file_path)
-    dataloader = DataLoader(
-        dataset,
-        batch_size=1,
-        shuffle=False,
-        pin_memory=True,
-        num_workers=4,
-        drop_last=False,
-    )
+    # dataset = SemiDataset(args.dataset, args.data_root, "label", args.crop_size, args.split_file_path)
+    # dataloader = DataLoader(
+    #     dataset,
+    #     batch_size=1,
+    #     shuffle=False,
+    #     pin_memory=True,
+    #     num_workers=4,
+    #     drop_last=False,
+    # )
+    dataloader = dataModule.predict_dataloader()
 
     select_reliable(checkpoints, dataloader, args)
 
@@ -662,15 +680,7 @@ class SemiDataset(Dataset):
             mask = Image.open(os.path.join(self.pseudo_mask_path, fname))
 
         # basic augmentation on all training images
-        base_size = (
-            400
-            if self.name == "pascal"
-            else 256
-            if self.name == "melanoma"
-            else 500
-            if self.name == "breastCancer"
-            else 2048
-        )
+        base_size = 32 if self.name == "hippocampus" else 256
         img, mask = resize(img, mask, base_size, (0.5, 2.0))
         img, mask = crop(img, mask, self.size)
         img, mask = hflip(img, mask, p=0.5)
