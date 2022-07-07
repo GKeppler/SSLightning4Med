@@ -10,10 +10,11 @@ import torch.nn.functional as F
 import yaml
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
+from torchmetrics import JaccardIndex
 
 from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.utils.utils import get_color_map, meanIOU
+from SSLightning4Med.utils.utils import get_color_map
 
 
 class STPlusPlusModule(BaseModule):
@@ -92,12 +93,14 @@ class STPlusPlusModule(BaseModule):
         if self.mode == "select_reliable":
             preds = []
             for model in self.checkpoints:
-                preds.append(self.oneHot(model(img)).cpu().numpy().astype(np.uint8))
+                preds.append(self.oneHot(model(img)).to(torch.long))
             mIOU = []
             for i in range(len(preds) - 1):
-                metric = meanIOU(self.args.n_class)
-                metric.add_batch(preds[i], preds[-1])
-                mIOU.append(metric.evaluate()[-1])
+                metric = JaccardIndex(
+                    # ignore_index=0,
+                    num_classes=self.n_class,
+                ).to(device=self.device)
+                mIOU.append(metric(preds[i].to(device=self.device), preds[-1].to(device=self.device)))
             reliability = sum(mIOU) / len(mIOU)
             self.id_to_reliability.append((id[0], reliability))
 
