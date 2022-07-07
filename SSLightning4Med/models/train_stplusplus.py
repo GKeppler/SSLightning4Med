@@ -92,7 +92,7 @@ class STPlusPlusModule(BaseModule):
         if self.mode == "select_reliable":
             preds = []
             for model in self.checkpoints:
-                preds.append(torch.argmax(model(img), dim=1).cpu().numpy())
+                preds.append(self.oneHot(model(img)).cpu().numpy().astype(np.uint8))
             mIOU = []
             for i in range(len(preds) - 1):
                 metric = meanIOU(self.args.n_class)
