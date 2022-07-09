@@ -134,6 +134,10 @@ class STPlusPlusModule(BaseModule):
         model = STPlusPlusModule(args)
         # <====================== Supervised training with labeled images (SupOnly) ======================>
         # trainer.tune(model, dataModule)
+        print(
+            "\n================> Total stage 1/%i: "
+            "Supervised training on labeled images (SupOnly)" % (6 if args.plus else 3)
+        )
         trainer.fit(model=model, datamodule=dataModule)
 
         # <====================== Test supervised model on testset (SupOnly) ======================>
@@ -141,49 +145,59 @@ class STPlusPlusModule(BaseModule):
 
         if not args.plus:
             # <============================= Pseudolabel all unlabeled images =============================>
-            trainer.model.eval()
+            print("\n\n\n================> Total stage 2/3: Pseudo labeling all unlabeled images")
             trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
             # <======================== Re-training on labeled and unlabeled images ========================>
-
+            print("\n\n\n================> Total stage 3/3: Re-training on labeled and unlabeled images")
             model = STPlusPlusModule(args)
-
             # increase max epochs to double the amount
             trainer.fit_loop.max_epochs = args.epochs * 2
             dataModule.mode = "pseudo_train"
             trainer.fit(model=model, datamodule=dataModule)
         else:
             # <===================================== Select Reliable IDs =====================================>
+            print("\n\n\n================> Total stage 2/6: Select reliable images for the 1st stage re-training")
             model.mode = "select_reliable"
             trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+
             # <================================ Pseudo label reliable images =================================>
+            print("\n\n\n================> Total stage 3/6: Pseudo labeling reliable images")
             dataModule.split_yaml_path = os.path.join(args.reliable_id_path, "reliable_ids.yaml")
             dataModule.setup_split()
             model.mode = "label"
             trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
+
             # <================================== The 1st stage re-training ==================================>
-
+            print(
+                "\n\n\n================> Total stage 4/6: The 1st stage re-training\
+                     on labeled and reliable unlabeled images"
+            )
             model = STPlusPlusModule(args)
-
             # increase max epochs to double the amount
             trainer.fit_loop.max_epochs = args.epochs * 2
             dataModule.mode = "pseudo_train"
             trainer.fit(model=model, datamodule=dataModule)
-            # <=============================== Pseudo label all images ================================>
 
+            # <=============================== Pseudo label all images ================================>
+            print("\n\n\n================> Total stage 5/6: Pseudo labeling all images")
             dataModule.split_yaml_path = args.split_file_path
             dataModule.setup_split()
             model.mode = "label"
             trainer.predict(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
             # <================================== The 2nd stage re-training ==================================>
+            print(
+                "\n\n\n================> Total stage 6/6: The 2nd stage re-training \
+                    on labeled and all unlabeled images"
+            )
             model = STPlusPlusModule(args)
-
             # increase max epochs to double the amount
             trainer.fit_loop.max_epochs = args.epochs * 3
             trainer.fit(model=model, datamodule=dataModule)
 
         # <====================== Test supervised model on testset (Semi) ======================>
+        print("\n\n\n================> Test supervised model on testset (Re-trained)")
         trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
 
 
