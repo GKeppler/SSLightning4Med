@@ -1,11 +1,8 @@
-# local package
 -e .
 albumentations==1.1.0
 click
 einops
 gdown
-
-# dataset download
 kaggle
 MedPy==0.4.0
 pathlib2
@@ -13,10 +10,7 @@ pydicom
 python-dotenv>=0.5.1
 pytorch-lightning
 synapseclient
-
-# train requirements and external requirements
 torch
 torchaudio
 torchvision
 wandb==0.12.18
-#scipy
