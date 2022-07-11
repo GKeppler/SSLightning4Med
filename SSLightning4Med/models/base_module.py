@@ -37,7 +37,9 @@ class BaseModule(pl.LightningModule):
         parser.add_argument("--optimizer", type=str, default="Adam", choices=["SGD", "AdamWOneCycle", "Adam"])
         parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
         parser.add_argument(
-            "--method", default="Supervised", choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher", "FixMatch"]
+            "--method",
+            default="Supervised",
+            choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher", "FixMatch", "PseudoCCT"],
         )
 
         # For St++ Model
@@ -59,7 +61,7 @@ class BaseModule(pl.LightningModule):
         self.use_wandb = args.use_wandb
         self.args = args
         self.oneHot = getOneHot(args.n_class)
-        if args.method == "CCT":
+        if args.method == "CCT" or args.method == "PseudoCCT":
             self.net = net_zoo[args.net][1]
         else:
             self.net = net_zoo[args.net][0]

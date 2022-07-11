@@ -1,13 +1,10 @@
 from typing import Any, Dict, Tuple
 
-import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 
 from SSLightning4Med.models.base_module import BaseModule
-from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.utils.utils import consistency_weight
 
 
@@ -53,7 +50,10 @@ class FixmatchModule(BaseModule):
         self.log("train_loss", loss, on_epoch=True, on_step=False)
         return {"loss": loss}
 
-    def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
+    @staticmethod
+    def pipeline(get_datamodule, get_trainer, args):
+        dataModule = get_datamodule(args)
+        trainer, checkpoint_callback = get_trainer(args)
         model = FixmatchModule(args)
         dataModule.mode = "fixmatch_train"
         trainer.fit(model=model, datamodule=dataModule)

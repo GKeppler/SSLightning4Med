@@ -16,6 +16,7 @@ from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.models.train_CCT import CCTModule
 from SSLightning4Med.models.train_fixmatch import FixmatchModule
 from SSLightning4Med.models.train_mean_teacher import MeanTeacherModule
+from SSLightning4Med.models.train_pseudoCCT import pseudoCCTModule
 from SSLightning4Med.models.train_stplusplus import STPlusPlusModule
 from SSLightning4Med.models.train_supervised import SupervisedModule
 from SSLightning4Med.utils.augmentations import Augmentations
@@ -250,6 +251,7 @@ if __name__ == "__main__":
         "Supervised": SupervisedModule,
         "MeanTeacher": MeanTeacherModule,
         "FixMatch": FixmatchModule,
+        "PseudoCCT": pseudoCCTModule,
         # "Bolt": BoltModule,
     }[args.method]
     module.pipeline(get_datamodule, get_trainer, args)
