@@ -40,7 +40,7 @@ class FixmatchModule(BaseModule):
             output_wa.detach().sigmoid() if self.args.n_class == 2 else torch.softmax(output_wa.detach(), dim=1)
         )
         if self.args.n_class == 2:
-            t = torch.Tensor([0.5], device=self.device)  # threshold
+            t = torch.Tensor([0.5]).to(self.device)  # threshold
             targets_u = (pseudo_label > t).float() * 1
             max_probs = pseudo_label
         else:
