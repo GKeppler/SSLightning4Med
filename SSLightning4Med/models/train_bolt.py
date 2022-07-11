@@ -1,13 +1,10 @@
 from typing import Any, Dict, Tuple
 
-import pytorch_lightning as pl
 import torch
 from pl_bolts.models.self_supervised import SwAV
-from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 
 from SSLightning4Med.models.base_module import BaseModule
-from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.deeplabv3plus import DeepLabV3Plus
 
 
@@ -40,7 +37,9 @@ class BoltModule(BaseModule):
         return {"loss": loss}
 
     @staticmethod
-    def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
+    def pipeline(get_datamodule, get_trainer, args):
+        dataModule = get_datamodule(args)
+        trainer, checkpoint_callback = get_trainer(args)
         model = BoltModule(args)
         trainer.fit(model=model, datamodule=dataModule)
         trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)

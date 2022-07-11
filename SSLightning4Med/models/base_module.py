@@ -2,11 +2,9 @@ from argparse import ArgumentParser
 from typing import List
 
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import optim
 from torchmetrics import JaccardIndex
 
-from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.nets.deeplabv3plus import DeepLabV3Plus
 from SSLightning4Med.nets.seg_former import SegFormer
 
@@ -163,5 +161,5 @@ class BaseModule(pl.LightningModule):
             return [optimizer], [lr_scheduler]
 
     @staticmethod
-    def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
+    def pipeline(get_datamodule, get_trainer, args):
         raise NotImplementedError

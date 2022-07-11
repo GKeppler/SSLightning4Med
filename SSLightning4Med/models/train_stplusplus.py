@@ -134,7 +134,9 @@ class STPlusPlusModule(BaseModule):
         self.set_metrics()
 
     @staticmethod
-    def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
+    def pipeline(get_datamodule, get_trainer, args):
+        dataModule = get_datamodule(args)
+        trainer, checkpoint_callback = get_trainer(args)
 
         model = STPlusPlusModule(args)
         # <====================== Supervised training with labeled images (SupOnly) ======================>
@@ -179,8 +181,7 @@ class STPlusPlusModule(BaseModule):
                      on labeled and reliable unlabeled images"
             )
             model = STPlusPlusModule(args)
-            # increase max epochs to double the amount
-            trainer.fit_loop.epoch_progress.reset()
+            trainer, checkpoint_callback = get_trainer(args)
             dataModule.mode = "pseudo_train"
             trainer.fit(model=model, datamodule=dataModule)
 
@@ -197,8 +198,7 @@ class STPlusPlusModule(BaseModule):
                     on labeled and all unlabeled images"
             )
             model = STPlusPlusModule(args)
-            # increase max epochs to double the amount
-            trainer.fit_loop.epoch_progress.reset()
+            trainer, checkpoint_callback = get_trainer(args)
             trainer.fit(model=model, datamodule=dataModule)
 
         # <====================== Test supervised model on testset (Semi) ======================>

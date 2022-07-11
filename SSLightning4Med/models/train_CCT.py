@@ -1,13 +1,10 @@
 from typing import Any, Dict, Tuple
 
-import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-from pytorch_lightning.callbacks import ModelCheckpoint
 from torch import Tensor
 
 from SSLightning4Med.models.base_module import BaseModule
-from SSLightning4Med.models.data_module import SemiDataModule
 from SSLightning4Med.utils.utils import consistency_weight, wandb_image_mask
 
 
@@ -80,56 +77,10 @@ class CCTModule(BaseModule):
         return wandb_image_mask(img, mask, pred, self.n_class)
 
     @staticmethod
-    def pipeline(dataModule: SemiDataModule, trainer: pl.Trainer, checkpoint_callback: ModelCheckpoint, args) -> None:
+    def pipeline(get_datamodule, get_trainer, args):
+        dataModule = get_datamodule(args)
+        trainer, checkpoint_callback = get_trainer(args)
         model = CCTModule(args)
         dataModule.mode = "semi_train"
         trainer.fit(model=model, datamodule=dataModule)
         trainer.test(datamodule=dataModule, ckpt_path=checkpoint_callback.best_model_path)
-
-
-# if __name__ == "__main__":
-#     args = base_parse_args(CCTModule)
-#     seed_everything(123, workers=True)
-
-#     checkpoint_callback = ModelCheckpoint(
-#         dirpath=os.path.join("./", f"{args.save_path}"),
-#         filename=f"{args.net}" + "-{epoch:02d}-{val_mIoU:.2f}",
-#         mode="max",
-#         save_weights_only=True,
-#     )
-#     if args.use_wandb:
-#         wandb.init(project="SSLightning4Med", entity="gkeppler")
-#         wandb_logger = WandbLogger(project="SSLightning4Med")
-#         wandb.config.update(args)
-
-#     dev_run = False  # not working when predicting with best_model checkpoint
-#     trainer = pl.Trainer.from_argparse_args(
-#         args,
-#         fast_dev_run=dev_run,
-#         max_epochs=args.epochs,
-#         log_every_n_steps=2,
-#         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-#         callbacks=[checkpoint_callback],
-#         gpus=[0],
-#         precision=16,
-#         # accelerator="cpu",
-#         # profiler="pytorch"
-#     )
-
-#     augs = Augmentations(args)
-#     color_map = get_color_map(args.dataset)
-#     dataModule = SemiDataModule(
-#         root_dir=args.data_root,
-#         batch_size=args.batch_size,
-#         split_yaml_path=args.split_file_path,
-#         test_yaml_path=args.test_file_path,
-#         pseudo_mask_path=args.pseudo_mask_path,
-#         mode="semi_train",
-#         color_map=color_map,
-#     )
-
-#     dataModule.val_transforms = augs.a_val_transforms()
-#     dataModule.train_transforms = augs.a_train_transforms_labeled()
-#     dataModule.train_transforms_unlabeled = augs.a_train_transforms_unlabeled()
-
-#     CCTModule.pipeline(dataModule, trainer, args)

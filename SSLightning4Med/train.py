@@ -158,32 +158,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     return args
 
 
-def main(args):
-    seed_everything(123, workers=True)
-
-    # Define DataModule with Augmentations
-    augs = Augmentations(args)
-    color_map = get_color_map(args.dataset)
-    dataModule = SemiDataModule(
-        root_dir=args.data_root,
-        batch_size=args.batch_size,
-        batch_size_unlabeled=args.batch_size_unlabeled,
-        split_yaml_path=args.split_file_path,
-        test_yaml_path=args.test_file_path,
-        pseudo_mask_path=args.pseudo_mask_path,
-        mode="train",
-        color_map=color_map,
-        num_workers=args.n_workers,
-    )
-
-    dataModule.val_transforms = augs.a_val_transforms()
-    dataModule.train_transforms = augs.a_train_transforms_weak()
-    dataModule.train_transforms_unlabeled = (
-        augs.a_train_transforms_strong_stplusplus()
-        if args.method == "St++" or args.method == "Fixmatch"
-        else augs.a_train_transforms_weak()
-    )
-
+def get_trainer(args):
     # saves a file like: my/path/sample-epoch=02-val_loss=0.32.ckpt
     checkpoint_callback = ModelCheckpoint(
         monitor="val_mIoU",
@@ -236,6 +211,38 @@ def main(args):
         # detect_anomaly=True,
         # overfit_batches=1,
     )
+    return trainer, checkpoint_callback
+
+
+def get_datamodule(args):
+    # Define DataModule with Augmentations
+    augs = Augmentations(args)
+    color_map = get_color_map(args.dataset)
+    dataModule = SemiDataModule(
+        root_dir=args.data_root,
+        batch_size=args.batch_size,
+        batch_size_unlabeled=args.batch_size_unlabeled,
+        split_yaml_path=args.split_file_path,
+        test_yaml_path=args.test_file_path,
+        pseudo_mask_path=args.pseudo_mask_path,
+        mode="train",
+        color_map=color_map,
+        num_workers=args.n_workers,
+    )
+
+    dataModule.val_transforms = augs.a_val_transforms()
+    dataModule.train_transforms = augs.a_train_transforms_weak()
+    dataModule.train_transforms_unlabeled = (
+        augs.a_train_transforms_strong_stplusplus()
+        if args.method == "St++" or args.method == "Fixmatch"
+        else augs.a_train_transforms_weak()
+    )
+    return dataModule
+
+
+if __name__ == "__main__":
+    args = base_parse_args(BaseModule)
+    seed_everything(123, workers=True)
     # define Module based on methods
     module = {
         "St++": STPlusPlusModule,
@@ -245,10 +252,4 @@ def main(args):
         "FixMatch": FixmatchModule,
         # "Bolt": BoltModule,
     }[args.method]
-
-    module.pipeline(dataModule, trainer, checkpoint_callback, args)
-
-
-if __name__ == "__main__":
-    args = base_parse_args(BaseModule)
-    main(args)
+    module.pipeline(get_datamodule, get_trainer, args)
