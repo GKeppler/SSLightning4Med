@@ -78,7 +78,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
                 "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/pneumothorax",
                 "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/multiorgan",
                 "brats": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/brats",
-                "hippocampus": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/hippocampus",
+                "hippocampus": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/hippocampus32",
                 "zebrafish": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/zebrafish256",
             }[args.dataset]
         else:
