@@ -17,6 +17,7 @@ class FixmatchModule(BaseModule):
             final_w=1, rampup_ends=self.ramp_up * self.epochs  # from Fixmatch paper
         )
         self.threshold = 0.95
+        self.cons_criterion = F.binary_cross_entropy_with_logits if self.args.n_class == 2 else F.cross_entropy
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         # supervised
@@ -36,13 +37,17 @@ class FixmatchModule(BaseModule):
         output_sa = self.net(unlabeled_image_batch_sa)
 
         pseudo_label = (
-            torch.softmax(output_wa.detach(), dim=1) if self.args.n_class == 2 else output_wa.detach().sigmoid()
+            output_wa.detach().sigmoid() if self.args.n_class == 2 else torch.softmax(output_wa.detach(), dim=1)
         )
-        max_probs, targets_u = torch.max(pseudo_label, dim=1)
-
+        if self.args.n_class == 2:
+            t = torch.Tensor([0.5], device=self.device)  # threshold
+            targets_u = (pseudo_label > t).float() * 1
+            max_probs = pseudo_label
+        else:
+            max_probs, targets_u = torch.max(pseudo_label, dim=1)
         mask = max_probs.ge(self.threshold).float()
 
-        unsupervised_loss = (F.cross_entropy(output_sa, targets_u, reduction="none") * mask).mean()
+        unsupervised_loss = (self.cons_criterion(output_sa, targets_u, reduction="none") * mask).mean()
         # warmup unsup loss to avoid inital noise
         loss = supervised_loss + unsupervised_loss * self.cons_w_unsup(self.current_epoch)
         self.log("supervised_loss", supervised_loss, on_epoch=True, on_step=False)

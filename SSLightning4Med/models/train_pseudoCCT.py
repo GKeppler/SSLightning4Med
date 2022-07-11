@@ -17,6 +17,7 @@ class pseudoCCTModule(BaseModule):
             final_w=1, rampup_ends=self.ramp_up * self.epochs  # from Fixmatch paper
         )
         self.threshold = 0.95
+        self.cons_criterion = F.binary_cross_entropy_with_logits if self.args.n_class == 2 else F.cross_entropy
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
         batch_unusupervised = batch["unlabeled"]
@@ -40,13 +41,18 @@ class pseudoCCTModule(BaseModule):
         output_wa, output_sa1, output_sa2, output_sa3 = self.net(image_batch)
 
         pseudo_label = (
-            torch.softmax(output_wa.detach(), dim=1) if self.args.n_class == 2 else output_wa.detach().sigmoid()
+            output_wa.detach().sigmoid() if self.args.n_class == 2 else torch.softmax(output_wa.detach(), dim=1)
         )
-        max_probs, targets_u = torch.max(pseudo_label, dim=1)
+        if self.args.n_class == 2:
+            t = torch.Tensor([0.5], device=self.device)  # threshold
+            targets_u = (pseudo_label > t).float() * 1
+            max_probs = pseudo_label
+        else:
+            max_probs, targets_u = torch.max(pseudo_label, dim=1)
         mask = max_probs.ge(self.threshold).float()
-        unsupervised_loss1 = (F.cross_entropy(output_sa1, targets_u, reduction="none") * mask).mean()
-        unsupervised_loss2 = (F.cross_entropy(output_sa2, targets_u, reduction="none") * mask).mean()
-        unsupervised_loss3 = (F.cross_entropy(output_sa3, targets_u, reduction="none") * mask).mean()
+        unsupervised_loss1 = (self.cons_criterion(output_sa1, targets_u, reduction="none") * mask).mean()
+        unsupervised_loss2 = (self.cons_criterion(output_sa2, targets_u, reduction="none") * mask).mean()
+        unsupervised_loss3 = (self.cons_criterion(output_sa3, targets_u, reduction="none") * mask).mean()
 
         unsupervised_loss = (unsupervised_loss1 + unsupervised_loss2 + unsupervised_loss3) / 3
         # warmup unsup loss to avoid inital noise
