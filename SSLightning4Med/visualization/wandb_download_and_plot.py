@@ -364,10 +364,13 @@ f = interp1d(x, y)
 xs = np.linspace(0.03334, 1, 1000)
 plt.plot(xs, f(xs), "b", lw=3)
 plt.plot(x, y, "ro", ms=5)
+# color the integral belwo the blue curve with light orange
+
+plt.fill_between(xs, f(xs), 0.0, color="orange", alpha=0.2)
 # Gamma as greek symbol in x lable
 plt.xlabel(r"Splitratio $\Gamma$")
 # text with unterscore Q_p
-plt.ylabel(r"Metric $Q_p$")
+plt.ylabel(r"Metric e.g. DSC")
 # horizontal line at 0.5
 plt.plot([0.03, 1], [0.0, 0.0], "k--")
 plt.savefig("metric_interpolation.pdf", pad_inches=0, bbox_inches="tight", transparent=True, dpi=300)

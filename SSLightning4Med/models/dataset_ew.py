@@ -1,3 +1,4 @@
+import math
 import os
 from typing import List, Optional, Tuple
 
@@ -25,7 +26,14 @@ class BaseDatasetEW:
         transform_unlabeled: Optional[Compose] = None,
     ) -> None:
         self.root_dir = root_dir
-        self.id_list = id_list + id_list_unlabeled if id_list_unlabeled is not None else id_list
+        self.id_list_labeled = id_list
+        self.id_list_unlabeled = id_list_unlabeled
+        self.id_list = (
+            self.id_list_labeled * math.ceil(len(self.id_list_unlabeled) / len(self.id_list_labeled))
+            + self.id_list_unlabeled
+            if self.id_list_unlabeled is not None
+            else self.id_list_labeled
+        )
         self.pseudo_mask_path = pseudo_mask_path
         self.transform = transform
         self.color_map = color_map
@@ -68,21 +76,18 @@ class BaseDatasetEW:
         # check if image is grayscale, if not convert to RGB
         if len(image.shape) == 3:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        if self.pseudo_mask_path is not None:
+        if self.pseudo_mask_path is not None and id in self.id_list_unlabeled:
             fname = os.path.basename(id.split(" ")[1])
             mask = cv2.imread(os.path.join(self.pseudo_mask_path, fname), cv2.IMREAD_UNCHANGED)
-            dic_key = "unlabeled"
         else:
             mask = cv2.imread(os.path.join(self.root_dir, id.split(" ")[1]), cv2.IMREAD_UNCHANGED)
-            dic_key = "pseudolabeled"
 
         mask = self._preprocess_mask(mask, self.color_map)
-        if id in self.id_list_unlabeled:
+        if self.id_list_unlabeled is not None and id in self.id_list_unlabeled:
             transformed = self.transform_unlabeled(image=image, mask=mask)
         else:
             transformed = self.transform(image=image, mask=mask)
-            dic_key = "labeled"
         image = transformed["image"]
         mask = transformed["mask"]
         mask = np.argmax(mask, axis=2)
-        return {dic_key: (image, mask, id)}
+        return image, mask, id

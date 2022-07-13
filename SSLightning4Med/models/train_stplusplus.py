@@ -56,13 +56,13 @@ class STPlusPlusModule(BaseModule):
         return final_result
 
     def training_step(self, batch: Dict[str, Tuple[Tensor, Tensor, str]]) -> Tensor:
-        img, mask, _ = batch["labeled"]
+        img, mask, _ = batch  # ["labeled"]
         # combine batches
-        if "pseudolabeled" in batch:
-            img_pseudo, mask_pseudo, _ = batch["pseudolabeled"]
-            # torch.unsqueeze(mask, dim=-1).shape
-            img = torch.cat((img, img_pseudo), 0)
-            mask = torch.cat((mask, mask_pseudo), 0)
+        # if "pseudolabeled" in batch:
+        #     img_pseudo, mask_pseudo, _ = batch["pseudolabeled"]
+        #     # torch.unsqueeze(mask, dim=-1).shape
+        #     img = torch.cat((img, img_pseudo), 0)
+        #     mask = torch.cat((mask, mask_pseudo), 0)
         pred = self(img)
         loss = self.criterion(pred, mask)
         self.log("train_loss", loss, on_epoch=True, on_step=False)
