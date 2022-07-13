@@ -10,7 +10,7 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 import wandb
 from SSLightning4Med.models.base_module import BaseModule
-from SSLightning4Med.models.data_module import SemiDataModule
+from SSLightning4Med.models.data_module_ew import SemiDataModule
 
 # from SSLightning4Med.models.train_bolt import BoltModule
 from SSLightning4Med.models.train_CCT import CCTModule
