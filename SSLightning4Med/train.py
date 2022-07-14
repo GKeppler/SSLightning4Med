@@ -100,7 +100,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "melanoma": 256,
             "breastCancer": 256,
             "pneumothorax": 256,
-            "multiorgan": 256,
+            "multiorgan": 512,
             "brats": 224,
             "hippocampus": 32,
             "zebrafish": 256,
