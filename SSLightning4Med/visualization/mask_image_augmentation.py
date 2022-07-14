@@ -54,9 +54,8 @@ def cutout(
 #%%
 def pascal_color_map():
     cmap = [
-        [0, 0, 0]
-        # ,[255,255,255]
-        ,
+        [0, 0, 0],
+        # [255,255,255],
         [102, 102, 156],
         [190, 153, 153],
         [153, 153, 153],
@@ -116,7 +115,7 @@ f, ax = plt.subplots(2, 4, figsize=(8, 4))
 plt.subplots_adjust(wspace=0.1, hspace=0)
 for i in range(0, 4):
     # visulaize mask and image
-    image_aug, mask_aug, _ = dataset[i + 70]
+    image_aug, mask_aug, _ = dataset[i * 39 + 55]
     try:
         image_aug = cv2.cvtColor(image_aug, cv2.COLOR_GRAY2RGB)
     except Exception as e:
@@ -164,12 +163,34 @@ hippocampus_dict = {
     1: "Anterior",
     2: "Posterior",
 }
+melanoma_dict = {
+    0: "Background",
+    1: "Melanoma",
+}
+breast_dict = {
+    0: "Background",
+    1: "Breast Nodule",
+}
+pneumothorax_dict = {
+    0: "Background",
+    1: "Pneumothorax",
+}
 
 
 legend_elements = []
-legend_dict = {"zebrafish": zebra_dict, "multiorgan": organ_dict, "hippocampus": hippocampus_dict}[dataset_name]
+legend_dict = {
+    "zebrafish": zebra_dict,
+    "multiorgan": organ_dict,
+    "hippocampus": hippocampus_dict,
+    "melanoma": melanoma_dict,
+    "breastCancer": breast_dict,
+    "pneumothorax": pneumothorax_dict,
+}[dataset_name]
 for i in range(0, len(legend_dict)):
-    legend_elements.append(mpatches.Patch(facecolor=tuple(np.array(color_map2)[i] / 255.0), label=legend_dict[i]))
+
+    legend_elements.append(
+        mpatches.Patch(facecolor=tuple(np.array(color_map2)[i] / 255.0), label=legend_dict[i], edgecolor="black")
+    )
 
 # legend without overlap to axes
 plt.legend(handles=legend_elements, loc="upper left", bbox_to_anchor=(1, 2), ncol=1, title="Classes")

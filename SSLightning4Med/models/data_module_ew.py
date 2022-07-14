@@ -113,7 +113,7 @@ class SemiDataModule(pl.LightningDataModule):
         )
 
     def predict_dataloader(self) -> DataLoader:
-        transforms = self.base_transform() if self.val_transforms is None else self.val_transforms
+        transforms = self.base_transform() if self.pred_transforms is None else self.pred_transforms
         predict_dataset = BaseDatasetEW(
             root_dir=self.root_dir,
             id_list=self.train_id_dict["unlabeled"],

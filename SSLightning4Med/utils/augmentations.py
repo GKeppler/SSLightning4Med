@@ -125,3 +125,11 @@ class Augmentations:
                 ToTensorV2(),
             ]
         )
+
+    def a_pred_transforms(self):
+        return A.Compose(
+            [
+                A.Normalize(self.mean, self.std),
+                ToTensorV2(),
+            ]
+        )

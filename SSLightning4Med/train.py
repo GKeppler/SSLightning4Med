@@ -232,6 +232,7 @@ def get_datamodule(args):
     )
 
     dataModule.val_transforms = augs.a_val_transforms()
+    dataModule.pred_transforms = augs.a_pred_transforms()
     dataModule.train_transforms = augs.a_train_transforms_weak()
     dataModule.train_transforms_unlabeled = (
         augs.a_train_transforms_strong_stplusplus()

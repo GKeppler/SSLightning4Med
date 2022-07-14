@@ -69,12 +69,7 @@ class STPlusPlusModule(BaseModule):
         return {"loss": loss}
 
     def training_epoch_end(self, outputs: List[Dict[str, Tensor]]) -> None:
-        if (self.current_epoch + 1) in [
-            self.args.epochs // 3,
-            self.args.epochs * 2 // 3,
-            self.args.epochs,
-        ]:
-            self.checkpoints.append(deepcopy(self.net))
+        self.checkpoints.append(deepcopy(self.net))
 
     def predict_step(self, batch: List[Union[Tensor, Tuple[str]]], batch_idx: int) -> None:
         img, mask, id = batch
@@ -89,8 +84,14 @@ class STPlusPlusModule(BaseModule):
             )
         if self.mode == "select_reliable":
             preds = []
-            for model in self.checkpoints:
-                preds.append(self.oneHot(model(img)).to(torch.long))
+            # for model in self.checkpoints:
+            #     preds.append(self.oneHot(model(img)).to(torch.long))
+            pred = self.checkpoints[len(self.checkpoints) // 3](img)
+            preds.append(self.oneHot(pred).to(torch.long))
+            pred = self.checkpoints[len(self.checkpoints) * 2 // 3](img)
+            preds.append(self.oneHot(pred).to(torch.long))
+            pred = self.checkpoints[-1](img)
+            preds.append(self.oneHot(pred).to(torch.long))
             mIOU = []
             for i in range(len(preds) - 1):
                 metric = JaccardIndex(
