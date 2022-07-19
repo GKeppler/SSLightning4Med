@@ -8,10 +8,10 @@ from albumentations.pytorch import ToTensorV2
 from numpy import ndarray
 from torch.utils.data import DataLoader
 
-from SSLightning4Med.models.dataset_ew import BaseDatasetEW
+from SSLightning4Med.models.dataset import BaseDatasetST
 
 
-class SemiDataModule(pl.LightningDataModule):
+class SemiDataModuleST(pl.LightningDataModule):
     def __init__(
         self,
         root_dir: str,
@@ -50,7 +50,7 @@ class SemiDataModule(pl.LightningDataModule):
             self.base_transform() if self.train_transforms_unlabeled is None else self.train_transforms_unlabeled
         )
         # supervised
-        dataset_labeled = BaseDatasetEW(
+        dataset_labeled = BaseDatasetST(
             root_dir=self.root_dir,
             id_list=self.train_id_dict["labeled"],
             transform=transforms,
@@ -67,7 +67,7 @@ class SemiDataModule(pl.LightningDataModule):
             return loader_labeled
         elif self.mode == "pseudo_train":
             # unsupervised
-            combined_dataset = BaseDatasetEW(
+            combined_dataset = BaseDatasetST(
                 root_dir=self.root_dir,
                 id_list=self.train_id_dict["labeled"],
                 id_list_unlabeled=self.train_id_dict["unlabeled"],
@@ -84,13 +84,31 @@ class SemiDataModule(pl.LightningDataModule):
                 shuffle=True,
             )
             return loader
+        elif self.mode == "semi_train":
+            # unsupervised
+            combined_dataset = BaseDatasetST(
+                root_dir=self.root_dir,
+                id_list=self.train_id_dict["labeled"],
+                id_list_unlabeled=self.train_id_dict["unlabeled"],
+                transform_unlabeled=transforms_unlabeled,
+                transform=transforms,
+                color_map=self.color_map,
+            )
+            loader = DataLoader(
+                combined_dataset,
+                batch_size=self.batch_size,
+                num_workers=self.num_workers,
+                pin_memory=True,
+                shuffle=True,
+            )
+            return loader
         else:
             raise ValueError("Wrong dataloader mode for training")
 
     def val_dataloader(self) -> DataLoader:
         transforms = self.base_transform() if self.val_transforms is None else self.val_transforms
 
-        val_dataset = BaseDatasetEW(
+        val_dataset = BaseDatasetST(
             root_dir=self.root_dir, transform=transforms, id_list=self.train_id_dict["val"], color_map=self.color_map
         )
         return DataLoader(
@@ -102,7 +120,7 @@ class SemiDataModule(pl.LightningDataModule):
 
     def test_dataloader(self) -> DataLoader:
         transforms = self.base_transform() if self.val_transforms is None else self.val_transforms
-        test_dataset = BaseDatasetEW(
+        test_dataset = BaseDatasetST(
             root_dir=self.root_dir, transform=transforms, id_list=self.test_id_list, color_map=self.color_map
         )
         return DataLoader(
@@ -114,7 +132,7 @@ class SemiDataModule(pl.LightningDataModule):
 
     def predict_dataloader(self) -> DataLoader:
         transforms = self.base_transform() if self.pred_transforms is None else self.pred_transforms
-        predict_dataset = BaseDatasetEW(
+        predict_dataset = BaseDatasetST(
             root_dir=self.root_dir,
             id_list=self.train_id_dict["unlabeled"],
             transform=transforms,

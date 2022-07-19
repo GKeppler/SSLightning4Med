@@ -10,7 +10,8 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 import wandb
 from SSLightning4Med.models.base_module import BaseModule
-from SSLightning4Med.models.data_module_ew import SemiDataModule
+from SSLightning4Med.models.data_module import SemiDataModule
+from SSLightning4Med.models.data_module_st import SemiDataModuleST
 
 # from SSLightning4Med.models.train_bolt import BoltModule
 from SSLightning4Med.models.train_CCT import CCTModule
@@ -77,7 +78,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
                 "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/melanoma256",
                 "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/breastCancer256",
                 "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/pneumothorax",
-                "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/multiorgan",
+                "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/multiorgan256",
                 "brats": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/brats",
                 "hippocampus": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/hippocampus32",
                 "zebrafish": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/zebrafish256",
@@ -100,7 +101,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "melanoma": 256,
             "breastCancer": 256,
             "pneumothorax": 256,
-            "multiorgan": 512,
+            "multiorgan": 256,
             "brats": 224,
             "hippocampus": 32,
             "zebrafish": 256,
@@ -219,7 +220,11 @@ def get_datamodule(args):
     # Define DataModule with Augmentations
     augs = Augmentations(args)
     color_map = get_color_map(args.dataset)
-    dataModule = SemiDataModule(
+    if args.method == "St++":
+        dataModule = SemiDataModuleST
+    else:
+        dataModule = SemiDataModule
+    dataModule = dataModule(
         root_dir=args.data_root,
         batch_size=args.batch_size,
         batch_size_unlabeled=args.batch_size_unlabeled,
