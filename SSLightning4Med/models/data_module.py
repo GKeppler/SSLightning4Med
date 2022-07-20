@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 import albumentations as A
@@ -24,6 +25,7 @@ class SemiDataModule(pl.LightningDataModule):
         color_map: Optional[ndarray] = None,
         mode: Optional[str] = "train",
         num_workers: Optional[int] = 0,
+        oversample: Optional[bool] = False,
     ) -> None:
         super().__init__()
         self.root_dir = root_dir
@@ -35,6 +37,7 @@ class SemiDataModule(pl.LightningDataModule):
         self.color_map = color_map
         self.mode = mode
         self.num_workers = num_workers
+        self.oversample = oversample
         self.setup_split()
 
     def setup_split(self):
@@ -53,7 +56,12 @@ class SemiDataModule(pl.LightningDataModule):
         # supervised
         dataset_labeled = BaseDataset(
             root_dir=self.root_dir,
-            id_list=self.train_id_dict["labeled"],
+            id_list=(
+                self.train_id_dict["labeled"]
+                * math.ceil(len(self.train_id_dict["unlabeled"]) / len(self.train_id_dict["labeled"]))
+                if self.oversample is True
+                else self.train_id_dict["labeled"]
+            ),
             transform=transforms,
             color_map=self.color_map,
         )

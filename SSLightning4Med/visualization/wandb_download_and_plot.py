@@ -10,7 +10,6 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.integrate import quad
 from scipy.interpolate import UnivariateSpline, interp1d
 
 import wandb
@@ -24,7 +23,7 @@ project_name = "SSLightning4Med"
 # most important filters are: "display_name", "sweep" in combination with or:
 
 # Zebrafish
-name = "heureka CCT"
+name = "all train"
 filters = {
     "Early-Stopping and best-checkpoint": {
         # "$or": [{"state": "finished"}, {"state": "crashed"}],
@@ -36,12 +35,14 @@ filters = {
     "Supervised all": {
         "sweep": "s6s9lkos",
     },
-    "heureka CCT": {
+    "all train": {
         "$or": [
             {"sweep": "9w5n97fs"},  # heureka CCT
             {"sweep": "t7yc3a60"},  # Supervised all correct St++ weak augmentations
-            {"sweep": "tizubuhc"},  # Fixmatch, MeanTeacher, St++ heureka
-            {"sweep": "v24zcssb"},  # hippocampus, mean,st++,fixmatch
+            {"sweep": "tizubuhc"},  # Fixmatch, MeanTeacher, heureka
+            {"sweep": "v24zcssb"},  # hippocampus, mean,fixmatch
+            {"sweep": "e1pynkrn"},  # st++ full
+            {"sweep": "zy0xrbns"},  # multiorgan, st, fixmatch, meanteacher
         ]
     },
     "test all": {
@@ -94,6 +95,7 @@ metric_dict = {
     "mean Pixel Accuracy": "test overall_acc",
     "mean Average Surface Distance": "test medpy_asd",
     "mean Hausdorff Distance": "test medpy_hd",
+    "runtime in sec": "_runtime",
 }  # "test mDICE"#"test mIOU"
 dataset_dict = {
     "melanoma": "ISIC Melanoma 2017",
@@ -130,61 +132,13 @@ all_df = pd.concat([all_df, late_epoch_df], axis=1)
 df = all_df.copy()
 all_df = all_df.loc[all_df[["split", "dataset", "method", "shuffle"]].drop_duplicates(inplace=False).index, :]
 print("Amount of experiments AFTER removing duplicates: ", len(all_df))
-#%%
-# methods comparison
-prep_df = all_df
-# ['brats':fehler, 'hippocampus':"1" unter "1/4", 'multiorgan':"super low",
-#  'pneumothorax': low,'breastCancer': low,'zebrafish':"low", 'melanoma': ]
-prep_df = prep_df[prep_df["dataset"] == "melanoma"]
-for metric_name in metric_dict.keys():
-    metric = metric_dict[metric_name]
-    columns = [
-        "split",
-        "method",
-        metric,
-    ]
-    method_df = prep_df[columns].groupby(["method", "split"]).agg([np.mean, np.std, np.count_nonzero])
-    method_df.dropna(axis=0, how="all", inplace=True)
-    columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
-    method_df.head()
-
-    # draw figure
-    fig, ax = plt.subplots()
-
-    for label, group in method_df.reset_index().groupby("method"):
-        # add a stepped horizontal lien to the plot
-        if label == "Supervised":
-            # get value of metric where split is 1
-            value = group.loc[group["split"] == "1", metric]["mean"].values[0]
-            print(value)
-            # drop this row from the dataframe "group"
-            group = group.drop(group[group["split"] == "1"].index)
-            ax.axhline(y=value, color="k", linestyle="--", label="Full Supervised")
-
-        # add label to legend
-
-        group.columns = ["".join(col) for col in group.columns]
-        # replace Na with 0
-        group[metric + "std"].replace(np.NaN, 0, inplace=True)
-        group["order"] = group["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
-        print(group.head())
-        group.sort_values(by="order").plot("split", metric + "mean", yerr=metric + "std", label=label, ax=ax)
-    ax.set_xlabel("Split")
-    ax.set_ylabel(metric_name)
-    plt.legend()
-    if not os.path.exists("figures"):
-        os.makedirs("figures")
-    dataset = prep_df["dataset"].iloc[0]
-    plt.savefig(
-        f"figures/{project_name}_{name}_{dataset}_{metric}_methods.pdf", transparent=False, bbox_inches="tight"
-    )
 
 # %%
 # dataset comparison
 prep_df = all_df
-# prep_df = prep_df[prep_df["dataset"] == "melanoma"]
-metric_name = "mean DSC"
+metric_name = "runtime in sec"  # "mean DSC"
 metric = metric_dict[metric_name]
+colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
 check_df = pd.DataFrame()
 dsc_df = pd.DataFrame()
 f, axes = plt.subplots(2, 3, figsize=(12, 6))
@@ -202,34 +156,37 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
 
     method_df.dropna(axis=0, how="all", inplace=True)
     columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
-    check_df = check_df.append(method_df[("test medpy_dc", "count_nonzero")].rename(dataset_name))
+    check_df = check_df.append(method_df[(metric, "count_nonzero")].rename(dataset_name))
     # draw figure
     # fig, axes = plt.subplots()
     ax = axes[i // 3, i % 3]
     i += 1
     for method, group in method_df.reset_index().groupby("method"):
         print(group.head())
+        # add label to legend
+        group.columns = ["".join(col) for col in group.columns]
+        mean_list = group[metric + "mean"].values / 60  # * 100.0
+        std_list = group[metric + "std"].values / 60  # * 100.0
+        dsc_df.loc[method_dict[method], dataset_name + " " + group["split"]] = [
+            f"{mean:.0f}" + "±" + f"{std:.0f}" for mean, std in zip(mean_list, std_list)
+        ]
         # add a stepped horizontal lien to the plot
         if method == "Supervised":
             # get value of metric where split is 1
-            value = group.loc[group["split"] == "1", metric]["mean"].values[0]
+            value = group.loc[group["split"] == "1", metric + "mean"].values[0]
             print(value)
             # drop this row from the dataframe "group"
+
             group = group.drop(group[group["split"] == "1"].index)
             ax.axhline(y=value, color="k", linestyle="--", label="Full Supervised")
 
-        # add label to legend
-        group.columns = ["".join(col) for col in group.columns]
         # replace Na with 0
         group[metric + "std"].replace(np.NaN, 0, inplace=True)
         group["order"] = group["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
         print(group.head())
-        group.sort_values(by="order").plot("split", metric + "mean", yerr=metric + "std", label=method, ax=ax)
-        mean_list = group[metric + "mean"].values * 100.0
-        std_list = group[metric + "std"].values * 100.0
-        dsc_df.loc[method_dict[method], dataset_name + " " + group["split"]] = [
-            f"{mean:.2f}" + "+-" + f"{std:.2f}" for mean, std in zip(mean_list, std_list)
-        ]
+        group.sort_values(by="order").plot(
+            "split", metric + "mean", yerr=metric + "std", label=method, ax=ax, color=colors[method]
+        )
     ax.set_xlabel("Split")
     ax.set_ylabel(metric_name)
     ax.title.set_text(dataset_dict[dataset_name])
@@ -243,29 +200,49 @@ if not os.path.exists("figures"):
     os.makedirs("figures")
 plt.savefig(f"figures/{project_name}_{name}_{metric}_dataset_comparison.pdf", transparent=False, bbox_inches="tight")
 print(check_df)
+dsc_df = dsc_df.transpose().reset_index()
+dsc_df.replace(np.NaN, "-", inplace=True)
+dsc_df[["Dataset", "Split"]] = dsc_df["index"].str.split(" ", 1, expand=True)
+# change name of entries in column "Dataset" using the dictionary
+dsc_df["Dataset"] = dsc_df["Dataset"].map(dataset_dict)
+dsc_df["order"] = dsc_df["Split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
+dsc_df = dsc_df.groupby("Dataset").apply(lambda x: x.sort_values(by="order", ascending=False))
+dsc_df.drop("Dataset", axis=1, inplace=True)
+dsc_df.drop("order", axis=1, inplace=True)
+dsc_df.drop("index", axis=1, inplace=True)
+dsc_df.reset_index(inplace=True)
+dsc_df.set_index(["Dataset", "Split"], inplace=True)
+dsc_df.drop("level_1", axis=1, inplace=True)
 dsc_df
+# %%
+# calulated the realitve difference between the mean of the two methods and the Supervised method
+difference = dsc_df.applymap(lambda x: x.replace("-", "NaN").split("±")[0]).astype(float)
+# subtract series from every column in the dataframe
+difference = difference.apply(lambda x: x - difference["Supervised"])
+difference.replace(np.NaN, "-", inplace=True)
+difference.drop("Supervised", axis=1, inplace=True)
+difference
 # %%
 # to latex
 print(dsc_df.transpose().to_latex(bold_rows=True))
 # %%
-# a graph about the meanIou and trainer/global_step of the different methods
-for metric_name in metric_dict.keys():
-    metric = metric_dict[metric_name]
+# a graph about the DSC and trainer/global_step of the different methods
+metric_name = "mean DSC"
+metric = metric_dict[metric_name]
+colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
+markers = {"1": "o", "1/4": "s", "1/8": "^", "1/30": "v"}
+f, axes = plt.subplots(2, 3, figsize=(12, 6))
+# remove spacing between subplots
+plt.subplots_adjust(wspace=0.4, hspace=0.4)
+i = 0
+runtime_df = pd.DataFrame()
+for dataset_name, prep_df in all_df.groupby("dataset"):
     columns = ["split", "method", metric, "_runtime"]
-
-    method_df = all_df[columns].groupby(["method", "split", "_runtime"]).agg([np.mean, np.std, np.count_nonzero])
+    method_df = prep_df[columns].groupby(["method", "split", "_runtime"]).agg([np.mean, np.std, np.count_nonzero])
     method_df.dropna(axis=0, how="all", inplace=True)
     columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
-    print(method_df)
-    # draw figure
-    fig, ax = plt.subplots()
-    # colors = {"1/30": 'r', "1/8": 'b', "1/4": 'g', "1": 'y'}
-    # markers = {"MeanTeacher": 'o', "St++": 's', "Supervised": '^', "FixMatch": 'P', "CCT": 'D'}
-    colors = {"Supervised": "r", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "k"}
-    markers = {"1": "o", "1/4": "s", "1/8": "^", "1/30": "v"}
-    # method_df["color"] = method_df.apply(lambda x: colors[x["group"]], axis=1)
-    # method_df["marker"] = method_df.apply(lambda x: markers[x["group"]], axis=1)
-
+    ax = axes[i // 3, i % 3]
+    i += 1
     for label, group in method_df.reset_index().groupby(["method", "split"]):
         group.columns = ["".join(col) for col in group.columns]
         group.plot(
@@ -273,17 +250,21 @@ for metric_name in metric_dict.keys():
         )
     ax.set_xlabel("Steps")
     ax.set_ylabel(metric_name)
-    legend1 = [mpatches.Patch(facecolor=list(colors.values())[i]) for i in range(5)]
-    legend2 = [
-        plt.plot([], [], list(markers.values())[i], markerfacecolor="w", markeredgecolor="k")[0] for i in range(4)
-    ]
-    plt.legend(legend1 + legend2, list(colors.keys()) + list(markers.keys()), ncol=2)
-    # if not os.path.exists("figures"):
-    #     os.makedirs("figures")
-    # dataset = all_df["dataset"].iloc[0]
-    # plt.savefig(
-    #     f"figures/{project_name}_{name}_{dataset}_{metric}_methods.pdf", transparent=False, bbox_inches="tight"
-    # )
+    ax.title.set_text(dataset_dict[dataset_name])
+    # ax.get_legend().remove()
+
+legend1 = [mpatches.Patch(facecolor=list(colors.values())[i]) for i in range(5)]
+legend2 = [plt.plot([], [], list(markers.values())[i], markerfacecolor="w", markeredgecolor="k")[0] for i in range(4)]
+plt.legend(
+    legend1 + legend2,
+    list(colors.keys()) + list(markers.keys()),
+    ncol=2,
+    loc="upper left",
+    bbox_to_anchor=(1, 2.5),
+    title="Methods/Splits",
+)
+
+plt.savefig(f"figures/{project_name}_{name}_computational_requirements.pdf", transparent=False, bbox_inches="tight")
 
 #%%
 # calculate interpolated integral for each plot
@@ -306,7 +287,7 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
             comb_df["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
         )
         comb_df = comb_df.sort_values("split_value")
-        print(dataset_name, method, comb_df)
+        # print(dataset_name, method, comb_df)
         x, y = comb_df["split_value"].values, comb_df["test medpy_dcmean"].values
 
         # make spline derivative ~0.0 at end of x
@@ -331,24 +312,32 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
         # plt.xlabel("Split")
         # plt.ylabel(metric)
         # print("Linear interpoaltion: ",quad(f, 0.0334, 1)[0] / comb_df["test medpy_dcmean"].iloc[-1])
-        dsc_interpol = quad(f, 0.0334, 1)[0] / comb_df["test medpy_dcmean"].iloc[-1]
-        runtime_mean = comb_df["_runtimemean"].iloc[-1] / np.nanmean(comb_df["_runtimemean"].values)
-        dsc_interpol_df.loc[method_dict[method], dataset_dict[dataset_name]] = f"{dsc_interpol:.2f}"
-        runtime_mean_df.loc[method_dict[method], dataset_dict[dataset_name]] = f"{runtime_mean:.2f}"
-#%%
-# compute the mean per row for "Q_performance"
-dsc_interpol_df[r"$Q_{Performace}$"] = dsc_interpol_df.astype(float).apply(np.nanmean, axis=1)
-runtime_mean_df[r"$Q_{Time}$"] = runtime_mean_df.astype(float).apply(np.nanmean, axis=1)
-# reduce number of after comma to 2
-dsc_interpol_df[r"$Q_{Performace}$"] = dsc_interpol_df[r"$Q_{Performace}$"].apply(lambda x: f"{x:.2f}")
-runtime_mean_df[r"$Q_{Time}$"] = runtime_mean_df[r"$Q_{Time}$"].apply(lambda x: f"{x:.2f}")
-print(dsc_interpol_df)
+        dsc_interpol = 1.0  # quad(f, 0.0334, 1)[0] / comb_df["test medpy_dcmean"].iloc[-1]/(1-0.0334)
+        runtime_mean = np.nanmean(comb_df["_runtimemean"].values)
+        dsc_interpol_df.loc[dataset_dict[dataset_name], method_dict[method]] = f"{dsc_interpol:.2f}"
+        runtime_mean_df.loc[dataset_dict[dataset_name], method_dict[method]] = f"{runtime_mean:.2f}"
+
+runtime_mean_df = runtime_mean_df.apply(
+    lambda x: runtime_mean_df["Supervised"].astype(float) / x.astype(float), axis=0
+)
 runtime_mean_df
+#%%
+# compute the mean per row
+mean_list, std_list = dsc_interpol_df.astype(float).mean().values, dsc_interpol_df.astype(float).std().values
+dsc_interpol_df = dsc_interpol_df.astype(float).applymap(lambda x: f"{x:.2f}")
+dsc_interpol_df.loc[r"$Q_{Segmentation Quality}$"] = [
+    f"{mean:.2f}" + "±" + f"{std:.2f}" for mean, std in zip(mean_list, std_list)
+]
+
+mean_list, std_list = runtime_mean_df.astype(float).mean().values, runtime_mean_df.astype(float).std().values
+runtime_mean_df = runtime_mean_df.astype(float).applymap(lambda x: f"{x:.2f}")
+runtime_mean_df.loc[r"$Q_{Time}$"] = [f"{mean:.2f}" + "±" + f"{std:.2f}" for mean, std in zip(mean_list, std_list)]
 
 #%%
-print(dsc_interpol_df.transpose().to_latex(bold_rows=True))
-print(runtime_mean_df.transpose().to_latex(bold_rows=True))
+print(dsc_interpol_df.to_latex(bold_rows=True))
+print(runtime_mean_df.to_latex(bold_rows=True))
 # %%
+# example of how to interpolate
 x, y = np.array([0.0333, 0.125, 0.25, 1]), np.array([0.3, 0.55, 0.74, 0.8])
 spl2 = UnivariateSpline(x, y, k=3)
 spl2.set_smoothing_factor(0.5)
@@ -449,3 +438,51 @@ fig, ax = plt.subplots()
 for col in columns_table:
     metrics_df[col].reset_index().plot("split", "mean", yerr="std", label=col[5:], ax=ax)
 plt.savefig(f"{project_name}_metrics.pdf", transparent=False, bbox_inches="tight")
+#%%
+# methods comparison
+prep_df = all_df
+# ['brats':fehler, 'hippocampus':"1" unter "1/4", 'multiorgan':"super low",
+#  'pneumothorax': low,'breastCancer': low,'zebrafish':"low", 'melanoma': ]
+prep_df = prep_df[prep_df["dataset"] == "melanoma"]
+for metric_name in metric_dict.keys():
+    metric = metric_dict[metric_name]
+    columns = [
+        "split",
+        "method",
+        metric,
+    ]
+    method_df = prep_df[columns].groupby(["method", "split"]).agg([np.mean, np.std, np.count_nonzero])
+    method_df.dropna(axis=0, how="all", inplace=True)
+    columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
+    method_df.head()
+
+    # draw figure
+    fig, ax = plt.subplots()
+
+    for label, group in method_df.reset_index().groupby("method"):
+        # add a stepped horizontal lien to the plot
+        if label == "Supervised":
+            # get value of metric where split is 1
+            value = group.loc[group["split"] == "1", metric]["mean"].values[0]
+            print(value)
+            # drop this row from the dataframe "group"
+            group = group.drop(group[group["split"] == "1"].index)
+            ax.axhline(y=value, color="k", linestyle="--", label="Full Supervised")
+
+        # add label to legend
+
+        group.columns = ["".join(col) for col in group.columns]
+        # replace Na with 0
+        group[metric + "std"].replace(np.NaN, 0, inplace=True)
+        group["order"] = group["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
+        print(group.head())
+        group.sort_values(by="order").plot("split", metric + "mean", yerr=metric + "std", label=label, ax=ax)
+    ax.set_xlabel("Split")
+    ax.set_ylabel(metric_name)
+    plt.legend()
+    if not os.path.exists("figures"):
+        os.makedirs("figures")
+    dataset = prep_df["dataset"].iloc[0]
+    plt.savefig(
+        f"figures/{project_name}_{name}_{dataset}_{metric}_methods.pdf", transparent=False, bbox_inches="tight"
+    )

@@ -23,6 +23,7 @@ class SemiDataModuleST(pl.LightningDataModule):
         color_map: Optional[ndarray] = None,
         mode: Optional[str] = "train",
         num_workers: Optional[int] = 0,
+        oversample: Optional[bool] = False,
     ) -> None:
         super().__init__()
         self.root_dir = root_dir

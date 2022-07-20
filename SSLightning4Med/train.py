@@ -54,13 +54,14 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--split", type=str, default="1_30")
     parser.add_argument("--shuffle", type=int, default=0)
     # these are derived from the above split, shuffle and dataset. They dont need to be set
-    parser.add_argument(
-        "--split-file-path", type=str, default=None
-    )  # "dataset/splits/melanoma/1_30/split_0/split_sample.yaml")
-    parser.add_argument("--test-file-path", type=str, default=None)  # "dataset/splits/melanoma/test_sample.yaml")
+    parser.add_argument("--split-file-path", type=str, default=None)
+    parser.add_argument("--test-file-path", type=str, default=None)
     parser.add_argument("--pseudo-mask-path", type=str, default=None)
     parser.add_argument("--save-path", type=str, default=None)
     parser.add_argument("--reliable-id-path", type=str, default=None)
+    parser.add_argument(
+        "--oversample", type=bool, default=False, help="use oversampling of labeled data for supervised learning"
+    )
     parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
     parser.add_argument("--wandb-project", type=str, default="SSLightning4Med")
     parser.add_argument("--lsdf", default=True, help="whether to use the LSDF storage")
@@ -105,16 +106,6 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
             "brats": 224,
             "hippocampus": 32,
             "zebrafish": 256,
-        }[args.dataset]
-    if args.base_size is None:
-        args.base_size = {
-            "melanoma": 512,
-            "breastCancer": 512,
-            "pneumothorax": 512,
-            "multiorgan": 512,
-            "brats": 240,
-            "hippocampus": 50,
-            "zebrafish": 480,
         }[args.dataset]
     if args.n_class is None:
         args.n_class = {
@@ -234,6 +225,7 @@ def get_datamodule(args):
         mode="train",
         color_map=color_map,
         num_workers=args.n_workers,
+        oversample=args.oversample,
     )
 
     dataModule.val_transforms = augs.a_val_transforms()
