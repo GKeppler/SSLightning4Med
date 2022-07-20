@@ -90,12 +90,12 @@ if len(all_df["dataset"].unique()) > 1:
 all_df = all_df.dropna(subset=["test medpy_dc"])
 print("Amount of experiments AFTER preprocessing: ", len(all_df))
 metric_dict = {
-    "mean DSC": "test medpy_dc",
-    "mean IoU": "test medpy_jc",
-    "mean Pixel Accuracy": "test overall_acc",
-    "mean Average Surface Distance": "test medpy_asd",
-    "mean Hausdorff Distance": "test medpy_hd",
-    "runtime in sec": "_runtime",
+    "mDSC": "test medpy_dc",
+    "mIoU": "test medpy_jc",
+    "mPixel Accuracy": "test overall_acc",
+    "mAverage Surface Distance": "test medpy_asd",
+    "mHausdorff Distance": "test medpy_hd",
+    "Runtime in min": "_runtime",
 }  # "test mDICE"#"test mIOU"
 dataset_dict = {
     "melanoma": "ISIC Melanoma 2017",
@@ -136,7 +136,7 @@ print("Amount of experiments AFTER removing duplicates: ", len(all_df))
 # %%
 # dataset comparison
 prep_df = all_df
-metric_name = "runtime in sec"  # "mean DSC"
+metric_name = "mDSC"  # "Runtime in min"  # "mDSC"
 metric = metric_dict[metric_name]
 colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
 check_df = pd.DataFrame()
@@ -165,10 +165,16 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
         print(group.head())
         # add label to legend
         group.columns = ["".join(col) for col in group.columns]
-        mean_list = group[metric + "mean"].values / 60  # * 100.0
-        std_list = group[metric + "std"].values / 60  # * 100.0
+        group[metric + "mean"] = (
+            group[metric + "mean"].astype(float).apply(lambda x: x * 100 if metric_name == "mDSC" else x / 60)
+        )
+        group[metric + "std"] = (
+            group[metric + "std"].astype(float).apply(lambda x: x * 100 if metric_name == "mDSC" else x / 60)
+        )
+        mean_list = group[metric + "mean"].values  # * 100.0
+        std_list = group[metric + "std"].values  # * 100.0
         dsc_df.loc[method_dict[method], dataset_name + " " + group["split"]] = [
-            f"{mean:.0f}" + "±" + f"{std:.0f}" for mean, std in zip(mean_list, std_list)
+            f"{mean:.2f}" + "±" + f"{std:.2f}" for mean, std in zip(mean_list, std_list)
         ]
         # add a stepped horizontal lien to the plot
         if method == "Supervised":
@@ -224,7 +230,7 @@ difference.drop("Supervised", axis=1, inplace=True)
 difference
 # %%
 # to latex
-print(dsc_df.transpose().to_latex(bold_rows=True))
+print(dsc_df.to_latex(bold_rows=True))
 # %%
 # a graph about the DSC and trainer/global_step of the different methods
 metric_name = "mean DSC"

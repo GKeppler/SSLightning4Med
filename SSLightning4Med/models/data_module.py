@@ -3,6 +3,7 @@ from typing import Optional
 
 import albumentations as A
 import pytorch_lightning as pl
+import torch
 import yaml
 from albumentations.core.composition import Compose
 from albumentations.pytorch import ToTensorV2
@@ -72,6 +73,7 @@ class SemiDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=True,
+                multiprocessing_context=torch.multiprocessing.get_context("spawn"),
             )
             return {"labeled": loader_labeled}
         elif self.mode == "pseudo_train":
@@ -81,6 +83,7 @@ class SemiDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=True,
+                multiprocessing_context=torch.multiprocessing.get_context("spawn"),
             )
             # unsupervised
             pseudolabeled_dataset = BaseDataset(
@@ -96,6 +99,7 @@ class SemiDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=True,
+                multiprocessing_context=torch.multiprocessing.get_context("spawn"),
             )
             combined_loaders = CombinedLoader(
                 {
@@ -112,6 +116,7 @@ class SemiDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=True,
+                multiprocessing_context=torch.multiprocessing.get_context("spawn"),
             )
             # unsupervised
             unlabeled_dataset = BaseDataset(
@@ -125,6 +130,7 @@ class SemiDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size_unlabeled,
                 num_workers=self.num_workers,
                 pin_memory=True,
+                multiprocessing_context=torch.multiprocessing.get_context("spawn"),
             )
             combined_loaders = CombinedLoader(
                 {
@@ -141,6 +147,7 @@ class SemiDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=True,
+                multiprocessing_context=torch.multiprocessing.get_context("spawn"),
             )
             # unsupervised
             unlabeled_dataset_wa = BaseDataset(
@@ -155,6 +162,7 @@ class SemiDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=False,
+                multiprocessing_context=torch.multiprocessing.get_context("spawn"),
             )
             unlabeled_dataset_sa = BaseDataset(
                 root_dir=self.root_dir,
@@ -168,6 +176,7 @@ class SemiDataModule(pl.LightningDataModule):
                 num_workers=self.num_workers,
                 pin_memory=True,
                 shuffle=False,
+                multiprocessing_context=torch.multiprocessing.get_context("spawn"),
             )
             combined_loaders = CombinedLoader(
                 {
