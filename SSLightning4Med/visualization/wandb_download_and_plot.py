@@ -47,9 +47,10 @@ filters = {
             {"sweep": "zy0xrbns"},  # multiorgan, st, fixmatch, meanteacher
             {"sweep": "e1pynkrn"},  # st++ full - 2 fehlen: hippo 1/8 4, 1/4 4
             {"sweep": "71qjbgon"},  # CCT multiorgan
+            {"sweep": "f80vaabi"},  # CCT multi 3,4
             {"display_name": "warm-plant-2432"},  # fixmatch 1/30 4
-            {"display_name": "frosty-butterfly-2433"},  # st++ hippo 1/4 4
-            {"display_name": "fine-monkey-2434"},  # st++ hippo 1/8 4
+            # {"display_name": ""},  # st++ hippo 1/4 4
+            # {"display_name": ""},  # st++ hippo 1/8 4
         ]
     },
     "test all": {
@@ -119,20 +120,35 @@ method_dict = {
     "FixMatch": "FixMatch",
     "MeanTeacher": "MeanTeacher",
 }
-#%%
-# get earlier values:
-# the first entry in "test medpy_dc" is the test value computed with the checkpoint from the last epoch
-metrics = ["test medpy_dc"]
-list_metrics = []
-for i, run in enumerate(runs):
-    for j, row in run.history(keys=metrics).iterrows():
-        # get only first elements of history -> supervised metric
-        row.name = i
-        list_metrics.append(row)
-        break
-late_epoch_df = pd.DataFrame(list_metrics).add_suffix(" lastepoch")
-# merge with all_df
-all_df = pd.concat([all_df, late_epoch_df], axis=1)
+colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
+markers = {"1": "o", "1/4": "s", "1/8": "^", "1/30": "v"}
+
+
+# iterate over every row of the latex string
+def make_highest_row_el_fat(latex):
+    def replace(row, el):
+        global latex
+        latex = latex.replace(row, row.replace(el, r"\textbf{" + el.replace(" ", "") + r"}"))
+
+    for row in latex.split("\n"):
+        # split every row by &
+        elements = row.split("&")[2:]  # drop first element
+        # remove \\from last element
+        if len(elements) > 1:
+            elements[-1] = elements[-1].replace("\\\\", "")
+            # convert every element to a float and mark highest value with \textbf{el}
+            try:
+                maxel = max(float(el) for el in elements)
+                for el in elements:
+                    if float(el) == maxel:
+                        try:
+                            replace(row, el)
+                        except ValueError:
+                            continue
+            except ValueError:
+                continue
+    return latex
+
 
 #%%
 # drop duplicates
@@ -143,9 +159,8 @@ print("Amount of experiments AFTER removing duplicates: ", len(all_df))
 # %%
 # dataset comparison
 prep_df = all_df
-metric_name = "mDSC"  # "Runtime in min"  # "mDSC"
+metric_name = "Runtime in min"  # "mDSC"
 metric = metric_dict[metric_name]
-colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
 check_df = pd.DataFrame()
 dsc_df = pd.DataFrame()
 f, axes = plt.subplots(2, 3, figsize=(12, 6))
@@ -226,7 +241,9 @@ dsc_df.drop("index", axis=1, inplace=True)
 dsc_df.reset_index(inplace=True)
 dsc_df.set_index(["Dataset", "Split"], inplace=True)
 dsc_df.drop("level_1", axis=1, inplace=True)
-dsc_df
+# to latex
+print(make_highest_row_el_fat(dsc_df.to_latex(bold_rows=True)))
+
 # %%
 # calulated the realitve difference between the mean of the two methods and the Supervised method
 difference = dsc_df.applymap(lambda x: x.replace("-", "NaN").split("±")[0]).astype(float)
@@ -234,17 +251,23 @@ difference = dsc_df.applymap(lambda x: x.replace("-", "NaN").split("±")[0]).ast
 difference = difference.apply(lambda x: x - difference["Supervised"])
 difference.replace(np.NaN, "-", inplace=True)
 difference.drop("Supervised", axis=1, inplace=True)
-difference
-print(difference.to_latex(bold_rows=True))
+print(make_highest_row_el_fat(difference.to_latex(bold_rows=True)))
 # %%
-# to latex
-print(dsc_df.to_latex(bold_rows=True))
+# comp mulitplier for supervised method
+multiplier = dsc_df.applymap(lambda x: x.replace("-", "NaN").split("±")[0]).astype(float)
+# delte rows with nan
+multiplier = multiplier.dropna(axis=0, how="any")
+# subtract series from every column in the dataframe
+multiplier = multiplier.apply(lambda x: x / multiplier["Supervised"]).applymap(lambda x: f"{float(x):.2f}")
+multiplier.drop("Supervised", axis=1, inplace=True)
+latex = multiplier.to_latex(bold_rows=True)
+print(make_highest_row_el_fat(latex))
+
+
 # %%
 # a graph about the DSC and trainer/global_step of the different methods
 metric_name = "mDSC"
 metric = metric_dict[metric_name]
-colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
-markers = {"1": "o", "1/4": "s", "1/8": "^", "1/30": "v"}
 f, axes = plt.subplots(2, 3, figsize=(12, 6))
 # remove spacing between subplots
 plt.subplots_adjust(wspace=0.4, hspace=0.4)
@@ -277,11 +300,9 @@ plt.legend(
     bbox_to_anchor=(1, 2.5),
     title="Methods/Splits",
 )
-
 plt.savefig(
     f"figures/{project_name}_{name}_computational_requirements_vs_mdsc.pdf", transparent=False, bbox_inches="tight"
 )
-
 #%%
 # calculate interpolated integral for each plot
 # reduce all splits to one value
@@ -305,7 +326,6 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
         comb_df = comb_df.sort_values("split_value")
         # print(dataset_name, method, comb_df)
         x, y = comb_df["split_value"].values, comb_df["test medpy_dcmean"].values
-
         # make spline derivative ~0.0 at end of x
         # x = np.append(x, 1.1)
         # y = np.append(y, y[-1])
@@ -314,20 +334,12 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
         # xs = np.linspace(0.03334, 1, 1000)
         # plt.plot(xs, spl(xs), "b", lw=3)
         # print("The qubic Integral is: ", spl.integral(0.0333, 1) / comb_df["test medpy_dcmean"].iloc[-1])
-
         # # linear interpolation
         try:
             f = interp1d(x, y)
         except Exception as e:
             print(e)
             continue
-        # plt.plot(x, y, "ro", ms=5)
-        # xs = np.linspace(0.03334, 1, 1000)
-        # plt.plot(xs, f(xs), "g", lw=3)
-        # # set x axit description
-        # plt.xlabel("Split")
-        # plt.ylabel(metric)
-        # print("Linear interpoaltion: ",quad(f, 0.0334, 1)[0] / comb_df["test medpy_dcmean"].iloc[-1])
         try:
             dsc_interpol = quad(f, 0.0334, 0.25)[0] / comb_df["test medpy_dcmean"].iloc[-1] / (0.25 - 0.0334)
         except Exception as e:
@@ -399,10 +411,8 @@ mean_list, std_list = runtime_mean_df.astype(float).mean().values, runtime_mean_
 runtime_mean_df = runtime_mean_df.astype(float).applymap(lambda x: f"{x:.2f}")
 runtime_mean_df.loc[r"$Q_{Time}$"] = [f"{mean:.2f}" + "±" + f"{std:.2f}" for mean, std in zip(mean_list, std_list)]
 
-
-#%%
-print(dsc_interpol_df.to_latex(bold_rows=True))
-print(runtime_mean_df.to_latex(bold_rows=True))
+print(make_highest_row_el_fat(dsc_interpol_df.to_latex(bold_rows=True)))
+print(make_highest_row_el_fat(runtime_mean_df.to_latex(bold_rows=True)))
 # %%
 # example of how to interpolate
 x, y = np.array([0.0333, 0.125, 0.25, 1]), np.array([0.3, 0.55, 0.74, 0.8])
@@ -431,7 +441,40 @@ plt.ylabel(r"Metric e.g. DSC")
 plt.plot([0.03, 1], [0.0, 0.0], "k--")
 plt.savefig("metric_interpolation.pdf", pad_inches=0, bbox_inches="tight", transparent=True, dpi=300)
 #
+#%%
+# get rows from
+complex_df = pd.DataFrame()
+# append row to complex_df
+complex_df = complex_df.append(dsc_interpol_df.loc[r"$Q_{Segmentation Quality}$"])
+complex_df = complex_df.append(runtime_mean_df.loc[r"$Q_{Time}$"])
+
+complex_df = complex_df.applymap(lambda x: x.split("±")[0])
+# append list [1,0,0,0] to dataframe as row
+complex_df = complex_df.append(
+    pd.Series([0.43, 0.5, 0.5, 0.43, 1.0], index=complex_df.columns, name="Q_hyperoarameters")
+)
+complex_df = complex_df.append(pd.Series([1, 1, 1, 0, 1], index=complex_df.columns, name="Q_complex"))
+
+weights_df = pd.DataFrame(
+    [[2.00, 0.00, 0.00, 0.00], [2.00, 0.00, 0.00, 1.00], [2.00, 1.00, 1.00, 0.00], [2.00, 1.00, 1.00, 1.00]],
+    index=["dev + resourcee", "no dev time, but resources", "no resources but dev time", "no resource+ no dev time"],
+)
+
+# for each row in weights_df iterate:
+df_tot = pd.DataFrame()
+for i, row in weights_df.iterrows():
+    p = row.astype(float).values * complex_df.transpose().astype(float).values
+    zw = []
+    for lis in p:
+        zw.append(sum(lis))
+    # pd.Series(zw,name=i, index=complex_df.columns)
+    df_tot = df_tot.append(pd.Series(zw, name=i, index=complex_df.columns))
+df_tot
+latex = df_tot.to_latex(bold_rows=True)
+print(make_highest_row_el_fat(latex))
 # %%
+# NOT USED
+# NOT USED
 # NOT USED
 # show metrics for method
 # for a given methods this will calculate the mean and std of the metrics
@@ -553,3 +596,17 @@ for metric_name in metric_dict.keys():
     plt.savefig(
         f"figures/{project_name}_{name}_{dataset}_{metric}_methods.pdf", transparent=False, bbox_inches="tight"
     )
+#%%
+# get earlier values:
+# the first entry in "test medpy_dc" is the test value computed with the checkpoint from the last epoch
+metrics = ["test medpy_dc"]
+list_metrics = []
+for i, run in enumerate(runs):
+    for j, row in run.history(keys=metrics).iterrows():
+        # get only first elements of history -> supervised metric
+        row.name = i
+        list_metrics.append(row)
+        break
+late_epoch_df = pd.DataFrame(list_metrics).add_suffix(" lastepoch")
+# merge with all_df
+all_df = pd.concat([all_df, late_epoch_df], axis=1)
