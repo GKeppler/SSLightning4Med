@@ -42,7 +42,6 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--batch-size-unlabeled", type=int, default=None)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--crop-size", type=int, default=None)
-    parser.add_argument("--base-size", type=int, default=None)
     parser.add_argument("--n-class", type=int, default=None)
     parser.add_argument("--n-channel", type=int, default=None)
     parser.add_argument("--n-workers", type=int, default=10)

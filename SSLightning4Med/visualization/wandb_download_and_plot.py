@@ -10,6 +10,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.integrate import quad
 from scipy.interpolate import UnivariateSpline, interp1d
 
 import wandb
@@ -37,12 +38,18 @@ filters = {
     },
     "all train": {
         "$or": [
-            {"sweep": "9w5n97fs"},  # heureka CCT
             {"sweep": "t7yc3a60"},  # Supervised all correct St++ weak augmentations
+            {"sweep": "8p6aca87"},  # supervised multiorgan
+            {"sweep": "9w5n97fs"},  # heureka CCT# multi CCT mising 6 - to be deleted
             {"sweep": "tizubuhc"},  # Fixmatch, MeanTeacher, heureka
             {"sweep": "v24zcssb"},  # hippocampus, mean,fixmatch
-            {"sweep": "e1pynkrn"},  # st++ full
+            {"sweep": "wwfefpza"},  # multiorgan 1/30, fixmatch, meanteacher - fixmatch 1/30 4 fehlt
             {"sweep": "zy0xrbns"},  # multiorgan, st, fixmatch, meanteacher
+            {"sweep": "e1pynkrn"},  # st++ full - 2 fehlen: hippo 1/8 4, 1/4 4
+            {"sweep": "71qjbgon"},  # CCT multiorgan
+            {"display_name": "warm-plant-2432"},  # fixmatch 1/30 4
+            {"display_name": "frosty-butterfly-2433"},  # st++ hippo 1/4 4
+            {"display_name": "fine-monkey-2434"},  # st++ hippo 1/8 4
         ]
     },
     "test all": {
@@ -228,12 +235,13 @@ difference = difference.apply(lambda x: x - difference["Supervised"])
 difference.replace(np.NaN, "-", inplace=True)
 difference.drop("Supervised", axis=1, inplace=True)
 difference
+print(difference.to_latex(bold_rows=True))
 # %%
 # to latex
 print(dsc_df.to_latex(bold_rows=True))
 # %%
 # a graph about the DSC and trainer/global_step of the different methods
-metric_name = "mean DSC"
+metric_name = "mDSC"
 metric = metric_dict[metric_name]
 colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
 markers = {"1": "o", "1/4": "s", "1/8": "^", "1/30": "v"}
@@ -244,17 +252,17 @@ i = 0
 runtime_df = pd.DataFrame()
 for dataset_name, prep_df in all_df.groupby("dataset"):
     columns = ["split", "method", metric, "_runtime"]
-    method_df = prep_df[columns].groupby(["method", "split", "_runtime"]).agg([np.mean, np.std, np.count_nonzero])
+    method_df = prep_df[columns].groupby(["method", "split"]).agg([np.mean, np.std, np.count_nonzero])
     method_df.dropna(axis=0, how="all", inplace=True)
-    columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
+
     ax = axes[i // 3, i % 3]
     i += 1
-    for label, group in method_df.reset_index().groupby(["method", "split"]):
-        group.columns = ["".join(col) for col in group.columns]
-        group.plot(
-            "_runtime", metric + "mean", color=colors[label[0]], marker=markers[label[1]], ax=ax, kind="scatter"
-        )
-    ax.set_xlabel("Steps")
+    method_df.columns = ["".join(col) for col in method_df.columns]
+    method_df["_runtimemean"] = method_df["_runtimemean"].astype(float).apply(lambda x: x / 60)
+    method_df[metric + "mean"] = method_df[metric + "mean"].astype(float).apply(lambda x: x * 100)
+    for j, row in method_df.iterrows():
+        ax.plot(row["_runtimemean"], row[metric + "mean"], color=colors[j[0]], marker=markers[j[1]])
+    ax.set_xlabel("Runtime in min")
     ax.set_ylabel(metric_name)
     ax.title.set_text(dataset_dict[dataset_name])
     # ax.get_legend().remove()
@@ -270,7 +278,9 @@ plt.legend(
     title="Methods/Splits",
 )
 
-plt.savefig(f"figures/{project_name}_{name}_computational_requirements.pdf", transparent=False, bbox_inches="tight")
+plt.savefig(
+    f"figures/{project_name}_{name}_computational_requirements_vs_mdsc.pdf", transparent=False, bbox_inches="tight"
+)
 
 #%%
 # calculate interpolated integral for each plot
@@ -318,7 +328,10 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
         # plt.xlabel("Split")
         # plt.ylabel(metric)
         # print("Linear interpoaltion: ",quad(f, 0.0334, 1)[0] / comb_df["test medpy_dcmean"].iloc[-1])
-        dsc_interpol = 1.0  # quad(f, 0.0334, 1)[0] / comb_df["test medpy_dcmean"].iloc[-1]/(1-0.0334)
+        try:
+            dsc_interpol = quad(f, 0.0334, 0.25)[0] / comb_df["test medpy_dcmean"].iloc[-1] / (0.25 - 0.0334)
+        except Exception as e:
+            dsc_interpol = 0
         runtime_mean = np.nanmean(comb_df["_runtimemean"].values)
         dsc_interpol_df.loc[dataset_dict[dataset_name], method_dict[method]] = f"{dsc_interpol:.2f}"
         runtime_mean_df.loc[dataset_dict[dataset_name], method_dict[method]] = f"{runtime_mean:.2f}"
@@ -327,6 +340,53 @@ runtime_mean_df = runtime_mean_df.apply(
     lambda x: runtime_mean_df["Supervised"].astype(float) / x.astype(float), axis=0
 )
 runtime_mean_df
+
+# %%
+# plot runtime_mean_df vs dsc_interpol_df per dataset
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.set_xlabel("Q Segmentation Quality")
+ax.set_ylabel("Q Time")
+ax.set_title("Runtime vs. DSC")
+# iter row in dataframe
+dataset_markers = {
+    "ISIC Melanoma 2017": "o",
+    "Breast Ultrasound": "s",
+    "Pneumothorax": "^",
+    "Hippocampus": "v",
+    "HeartSeg": "D",
+    "Synapse multi-organ": "*",
+}
+method_colors = {}
+# use dict inverse
+method_dict_inv = {v: k for k, v in method_dict.items()}
+
+for i, row in runtime_mean_df.iterrows():
+    # iter column in row
+    for j, col in row.iteritems():
+        # plot
+        ax.plot(
+            dsc_interpol_df.loc[i, j],
+            runtime_mean_df.loc[i, j],
+            marker=dataset_markers[i],
+            color=colors[method_dict_inv[j]],
+            label=i,
+        )
+
+legend1 = [mpatches.Patch(facecolor=list(colors.values())[i]) for i in range(5)]
+legend2 = [
+    plt.plot([], [], list(dataset_markers.values())[i], markerfacecolor="w", markeredgecolor="k")[0] for i in range(6)
+]
+plt.legend(
+    legend2 + legend1,
+    list(dataset_markers.keys()) + list(colors.keys()),
+    ncol=2,
+    loc="upper left",
+    bbox_to_anchor=(1, 1),
+    title="Datasets/Methods",
+)
+
+plt.savefig(f"figures/{project_name}_{name}_Q_Time_vs_Q_seg_quality.pdf", transparent=False, bbox_inches="tight")
+
 #%%
 # compute the mean per row
 mean_list, std_list = dsc_interpol_df.astype(float).mean().values, dsc_interpol_df.astype(float).std().values
@@ -338,6 +398,7 @@ dsc_interpol_df.loc[r"$Q_{Segmentation Quality}$"] = [
 mean_list, std_list = runtime_mean_df.astype(float).mean().values, runtime_mean_df.astype(float).std().values
 runtime_mean_df = runtime_mean_df.astype(float).applymap(lambda x: f"{x:.2f}")
 runtime_mean_df.loc[r"$Q_{Time}$"] = [f"{mean:.2f}" + "±" + f"{std:.2f}" for mean, std in zip(mean_list, std_list)]
+
 
 #%%
 print(dsc_interpol_df.to_latex(bold_rows=True))
