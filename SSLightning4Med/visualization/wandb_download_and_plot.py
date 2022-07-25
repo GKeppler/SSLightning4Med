@@ -40,17 +40,21 @@ filters = {
         "$or": [
             {"sweep": "t7yc3a60"},  # Supervised all correct St++ weak augmentations
             {"sweep": "8p6aca87"},  # supervised multiorgan
-            {"sweep": "9w5n97fs"},  # heureka CCT# multi CCT mising 6 - to be deleted
+            {"sweep": "9w5n97fs"},  # heureka CCT#
             {"sweep": "tizubuhc"},  # Fixmatch, MeanTeacher, heureka
             {"sweep": "v24zcssb"},  # hippocampus, mean,fixmatch
             {"sweep": "wwfefpza"},  # multiorgan 1/30, fixmatch, meanteacher - fixmatch 1/30 4 fehlt
+            {"display_name": "warm-plant-2432"},  # fixmatch 1/30 4
             {"sweep": "zy0xrbns"},  # multiorgan, st, fixmatch, meanteacher
             {"sweep": "e1pynkrn"},  # st++ full - 2 fehlen: hippo 1/8 4, 1/4 4
-            {"sweep": "71qjbgon"},  # CCT multiorgan
+            {"display_name": "cerulean-voice-2441"},  # st++ hippo 1/4 4
+            {"display_name": "treasured-fire-2439"},  # st++ hippo 1/8 4
+            {"sweep": "71qjbgon"},  # CCT multiorgan 1,2
             {"sweep": "f80vaabi"},  # CCT multi 3,4
-            {"display_name": "warm-plant-2432"},  # fixmatch 1/30 4
-            # {"display_name": ""},  # st++ hippo 1/4 4
-            # {"display_name": ""},  # st++ hippo 1/8 4
+            {"display_name": "dauntless-breeze-2447"},  # CCT zebra 1/30 1
+            {"display_name": "peach-rain-2447"},  # CCT zebra 1/8 3
+            {"display_name": "deep-glade-2449"},  # CCT zebra 1/30 0
+            {"display_name": "treasured-fire-2439"},  # multi fixmatch,
         ]
     },
     "test all": {
@@ -122,6 +126,7 @@ method_dict = {
 }
 colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
 markers = {"1": "o", "1/4": "s", "1/8": "^", "1/30": "v"}
+latex = ""
 
 
 # iterate over every row of the latex string
@@ -168,6 +173,7 @@ f, axes = plt.subplots(2, 3, figsize=(12, 6))
 plt.subplots_adjust(wspace=0.4, hspace=0.4)
 i = 0
 for dataset_name, prep_df in all_df.groupby("dataset"):
+    print(dataset_name)
     columns = [
         "split",
         "method",
@@ -469,9 +475,17 @@ for i, row in weights_df.iterrows():
         zw.append(sum(lis))
     # pd.Series(zw,name=i, index=complex_df.columns)
     df_tot = df_tot.append(pd.Series(zw, name=i, index=complex_df.columns))
-df_tot
+# dmin-max normaliaztion of all row
+df_tot = df_tot.astype(float).apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=1).round(2)
 latex = df_tot.to_latex(bold_rows=True)
 print(make_highest_row_el_fat(latex))
+#%%
+# calculate the pearson correlation coefficient
+p = complex_df.transpose().astype(float).corr(method="pearson", min_periods=1)
+# .2f format
+p = p.applymap(lambda x: f"{x:.2f}")
+# latex
+print(p.to_latex(bold_rows=True))
 # %%
 # NOT USED
 # NOT USED

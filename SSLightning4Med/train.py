@@ -19,6 +19,7 @@ from SSLightning4Med.models.train_fixmatch import FixmatchModule
 from SSLightning4Med.models.train_mean_teacher import MeanTeacherModule
 from SSLightning4Med.models.train_pseudoCCT import pseudoCCTModule
 from SSLightning4Med.models.train_stplusplus import STPlusPlusModule
+from SSLightning4Med.models.train_stplusplusCCT import STPlusPlusCCTModule
 from SSLightning4Med.models.train_supervised import SupervisedModule
 from SSLightning4Med.utils.augmentations import Augmentations
 from SSLightning4Med.utils.utils import get_color_map
@@ -249,6 +250,7 @@ if __name__ == "__main__":
         "MeanTeacher": MeanTeacherModule,
         "FixMatch": FixmatchModule,
         "PseudoCCT": pseudoCCTModule,
+        "St++CCT": STPlusPlusCCTModule,
         # "Bolt": BoltModule,
     }[args.method]
     module.pipeline(get_datamodule, get_trainer, args)
