@@ -61,7 +61,7 @@ class STPlusPlusCCTModule(BaseModule):
         return {"loss": loss}
 
     def training_epoch_end(self, outputs: List[Dict[str, Tensor]]) -> None:
-        self.checkpoints.append(deepcopy(self.net))
+        self.checkpoints.append(deepcopy(self.net).cpu())
 
     def validation_step(self, batch, batch_idx):  # type: ignore
         img, mask, id = batch
@@ -78,6 +78,12 @@ class STPlusPlusCCTModule(BaseModule):
         pred = self.oneHot(pred).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
         return wandb_image_mask(img, mask, pred, self.n_class)
+
+    def on_predict_start(self) -> None:
+        if self.mode == "select_reliable":
+            self.checkpoints[len(self.checkpoints) // 3].to(self.device)
+            self.checkpoints[len(self.checkpoints) * 2 // 3].to(self.device)
+            self.checkpoints[-1].to(self.device)
 
     def predict_step(self, batch: List[Union[Tensor, Tuple[str]]], batch_idx: int) -> None:
         img, mask, id = batch

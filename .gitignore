@@ -97,3 +97,4 @@ wandb/*
 monkeytype.sqlite3
 *.ckpt
 SSLightning4Med/visualization/figures/*
+SSLightning4Med/data/splits/melanoma/split_small.yaml
