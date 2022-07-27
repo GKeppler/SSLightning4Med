@@ -1,7 +1,5 @@
 #!/bin/bash
 
-git clone https://github.com/GKeppler/SSLightning4Med.git
-
 cd SSLightning4Med
 conda env create -f environment-gpu.yaml
 
