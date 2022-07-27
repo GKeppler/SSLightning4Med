@@ -136,33 +136,34 @@ def tensorboard_image_grid(pred: Tensor, color_map: ndarray) -> None:
     # self.logger.experiment.add_image('generated_images', grid, trainer.global_step)
 
 
-def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21):
+def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21, caption: str = None) -> None:
     class_labeles = dict((el, "something") for el in list(range(nclass)))
     class_labeles.update({0: "nothing"})
     return wandb.Image(
         cv2.resize(
             np.moveaxis(np.squeeze(img.cpu().numpy(), axis=0), 0, -1),
-            dsize=(100, 100),
+            dsize=(200, 200),
             interpolation=cv2.INTER_NEAREST,
         ),
         masks={
             "predictions": {
                 "mask_data": cv2.resize(
                     np.squeeze(pred.cpu().numpy(), axis=0),
-                    dsize=(100, 100),
+                    dsize=(200, 200),
                     interpolation=cv2.INTER_NEAREST,
                 ),
                 "class_labels": class_labeles,
             },
-            "ground_truth": {
-                "mask_data": cv2.resize(
-                    np.squeeze(mask.cpu().numpy(), axis=0),
-                    dsize=(100, 100),
-                    interpolation=cv2.INTER_NEAREST,
-                ),
-                "class_labels": class_labeles,
-            },
+            # "ground_truth": {
+            #     "mask_data": cv2.resize(
+            #         np.squeeze(mask.cpu().numpy(), axis=0),
+            #         dsize=(100, 100),
+            #         interpolation=cv2.INTER_NEAREST,
+            #     ),
+            #     "class_labels": class_labeles,
+            # },
         },
+        caption=caption,
     )
 
 

@@ -57,6 +57,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     parser.add_argument("--split-file-path", type=str, default=None)
     parser.add_argument("--test-file-path", type=str, default=None)
     parser.add_argument("--pseudo-mask-path", type=str, default=None)
+    parser.add_argument("--test-mask-path", type=str, default=None)
     parser.add_argument("--save-path", type=str, default=None)
     parser.add_argument("--reliable-id-path", type=str, default=None)
     parser.add_argument(
@@ -137,6 +138,8 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
         )
     if args.test_file_path is None:
         args.test_file_path = f"SSLightning4Med/data/splits/{args.dataset}/test.yaml"
+    if args.test_mask_path is None:
+        args.test_mask_path = f"{args.data_root}/test_masks/{args.method}/{args.split}/split_{args.shuffle}"
     if args.pseudo_mask_path is None:
         args.pseudo_mask_path = f"{args.data_root}/pseudo_masks/{args.method}/{args.split}/split_{args.shuffle}"
     if args.save_path is None:
@@ -146,6 +149,8 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
 
     if not os.path.exists(args.save_path):
         os.makedirs(args.save_path, exist_ok=True)
+    if not os.path.exists(args.test_mask_path):
+        os.makedirs(args.test_mask_path, exist_ok=True)
     if not os.path.exists(args.pseudo_mask_path):
         os.makedirs(args.pseudo_mask_path, exist_ok=True)
     return args

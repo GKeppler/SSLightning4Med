@@ -157,6 +157,23 @@ def make_highest_row_el_fat(latex):
 
 
 #%%
+
+
+# goal is original image, original mask, and masks from methods. 2 per dataset
+
+# get dataframe of all_Df wher shuffle is 0
+all_df_shuffle_0 = all_df[all_df["shuffle"] == 0]
+# remove entries with split=1 from dataframe
+all_df_shuffle_0 = all_df_shuffle_0[all_df_shuffle_0["split"] != "1"]
+# iterate over all_df_shuffle_0 and download the examples
+runs = api.runs(f"gkeppler/{project_name}", filters=filters[name])
+for run in runs:
+    if run.name in all_df_shuffle_0["name"].values:
+        for file in run.files():
+            print(file.name)
+            file.download(replace=True, root="wandb_images")
+    break
+#%%
 # drop duplicates
 df = all_df.copy()
 all_df = all_df.loc[all_df[["split", "dataset", "method", "shuffle"]].drop_duplicates(inplace=False).index, :]
@@ -249,7 +266,8 @@ dsc_df.reset_index(inplace=True)
 dsc_df.set_index(["Dataset", "Split"], inplace=True)
 dsc_df.drop("level_1", axis=1, inplace=True)
 # to latex
-print(make_highest_row_el_fat(dsc_df.to_latex(bold_rows=True)))
+# make_highest_row_el_fat(dsc_df.to_latex(bold_rows=True))
+print(dsc_df.to_latex(bold_rows=True))
 
 # %%
 # calulated the realitve difference between the mean of the two methods and the Supervised method
@@ -258,7 +276,9 @@ difference = dsc_df.applymap(lambda x: x.replace("-", "NaN").split("±")[0]).ast
 difference = difference.apply(lambda x: x - difference["Supervised"])
 difference.replace(np.NaN, "-", inplace=True)
 difference.drop("Supervised", axis=1, inplace=True)
-print(make_highest_row_el_fat(difference.to_latex(bold_rows=True)))
+latex = difference.to_latex(bold_rows=True)
+make_highest_row_el_fat(latex)
+print(latex)
 # %%
 # comp mulitplier for supervised method
 multiplier = dsc_df.applymap(lambda x: x.replace("-", "NaN").split("±")[0]).astype(float)
@@ -268,8 +288,8 @@ multiplier = multiplier.dropna(axis=0, how="any")
 multiplier = multiplier.apply(lambda x: x / multiplier["Supervised"]).applymap(lambda x: f"{float(x):.2f}")
 multiplier.drop("Supervised", axis=1, inplace=True)
 latex = multiplier.to_latex(bold_rows=True)
-print(make_highest_row_el_fat(latex))
-
+make_highest_row_el_fat(latex)
+print(latex)
 
 # %%
 # a graph about the DSC and trainer/global_step of the different methods
@@ -418,8 +438,10 @@ mean_list, std_list = runtime_mean_df.astype(float).mean().values, runtime_mean_
 runtime_mean_df = runtime_mean_df.astype(float).applymap(lambda x: f"{x:.2f}")
 runtime_mean_df.loc[r"$Q_{Time}$"] = [f"{mean:.2f}" + "±" + f"{std:.2f}" for mean, std in zip(mean_list, std_list)]
 
-print(make_highest_row_el_fat(dsc_interpol_df.to_latex(bold_rows=True)))
-print(make_highest_row_el_fat(runtime_mean_df.to_latex(bold_rows=True)))
+make_highest_row_el_fat(dsc_interpol_df.to_latex(bold_rows=True))
+print(latex)
+make_highest_row_el_fat(runtime_mean_df.to_latex(bold_rows=True))
+print(latex)
 # %%
 # example of how to interpolate
 x, y = np.array([0.0333, 0.125, 0.25, 1]), np.array([0.3, 0.55, 0.74, 0.8])
@@ -477,9 +499,10 @@ for i, row in weights_df.iterrows():
     # pd.Series(zw,name=i, index=complex_df.columns)
     df_tot = df_tot.append(pd.Series(zw, name=i, index=complex_df.columns))
 # dmin-max normaliaztion of all row
-# df_tot = df_tot.astype(float).apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=1).round(2)
+df_tot = df_tot.astype(float).apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=1).round(2)
 latex = df_tot.to_latex(bold_rows=True)
-print(make_highest_row_el_fat(latex))
+make_highest_row_el_fat(latex)
+print(latex)
 #%%
 # calculate the pearson correlation coefficient
 p = complex_df.transpose().astype(float).corr(method="pearson", min_periods=1)

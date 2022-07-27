@@ -1,5 +1,8 @@
+import os
 from typing import Any, Dict, Tuple
 
+import cv2
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import Tensor
@@ -76,7 +79,15 @@ class pseudoCCTModule(BaseModule):
         pred = self.net(img)[0]
         pred = self.oneHot(pred).cpu()
         self.test_metrics.add_batch(pred.numpy(), mask.cpu().numpy())
-        return wandb_image_mask(img, mask, pred, self.n_class)
+        caption = f"{self.args.method}, {self.args.dataset}, {self.args.split}, {self.args.shuffle},id:{id[0]}"
+        image = wandb_image_mask(img, mask, pred, self.n_class, caption=caption)
+        pred = pred.squeeze(0).numpy().astype(np.uint8)
+        pred = np.array(self.color_map)[pred]
+        cv2.imwrite(
+            "%s/%s" % (self.args.test_mask_path, os.path.basename(id[0].split(" ")[1])),
+            cv2.cvtColor(pred.astype(np.uint8), cv2.COLOR_BGR2RGB),
+        )
+        return image
 
     @staticmethod
     def pipeline(get_datamodule, get_trainer, args):

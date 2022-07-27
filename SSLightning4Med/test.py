@@ -14,6 +14,7 @@ from SSLightning4Med.models.train_CCT import CCTModule
 from SSLightning4Med.models.train_fixmatch import FixmatchModule
 from SSLightning4Med.models.train_mean_teacher import MeanTeacherModule
 from SSLightning4Med.models.train_stplusplus import STPlusPlusModule
+from SSLightning4Med.models.train_stplusplusCCT import STPlusPlusCCTModule
 from SSLightning4Med.models.train_supervised import SupervisedModule
 from SSLightning4Med.train import base_parse_args
 from SSLightning4Med.utils.augmentations import Augmentations
@@ -76,10 +77,11 @@ def main(args):
             "Supervised": SupervisedModule,
             "MeanTeacher": MeanTeacherModule,
             "FixMatch": FixmatchModule,
+            "St++CCT": STPlusPlusCCTModule,
             # "Bolt": BoltModule,
         }[args.method]
         model = module(args)
-        trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_epoch_file))
+        # trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_epoch_file))
         trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_mIoU_file))
 
 
