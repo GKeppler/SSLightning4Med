@@ -9,21 +9,29 @@ This is the official  [Pytorch Lightning](https://github.com/PyTorchLightning/py
 
 The instructions assumes that you have Miniconda installed on your machine.
 
-'''
+```
 conda env create -f environment-gpu.yaml
-'''
+```
 
-### Alternative: pip install
+[comment]: <> (### Alternative: pip install
 TODO
-`pip install -U sslightning4med`
+`pip install -U sslightning4med`)   
 
 ## Data Preparation
 
 ### Download datasets
-[Ultrasound detection of breast nodules](https://scholar.cu.edu.eg/?q=afahmy/pages/dataset) | [SIIM 2017 ISIC Melanoma Segmentation](https://challenge.isic-archive.com/data/) |
-[Automated Cardiac Diagnosis Challenge](https://www.creatis.insa-lyon.fr/Challenge/acdc/databasesTesting.html) | [SIIM-ACR Pneumothorax Segmentation](https://www.kaggle.com/c/siim-acr-pneumothorax-segmentation)
+Sign-up for Kaggle and Synapse and put credentials into the .env file in the main folder
+run
+```
+make.sh
+```
+to download ad preprocess the datasets
 
-Download dataset and split fro exmaple into following folder structure.
+### or:
+
+[Ultrasound detection of breast nodules](https://scholar.cu.edu.eg/?q=afahmy/pages/dataset) | [SIIM 2017 ISIC Melanoma Segmentation](https://challenge.isic-archive.com/data/) | [SIIM-ACR Pneumothorax Segmentation](https://www.kaggle.com/c/siim-acr-pneumothorax-segmentation) etc.
+
+Download dataset and split from exmaple into following folder structure.
 ```
 ├── [Your Dataset Path]
     ├── train
@@ -34,8 +42,7 @@ Download dataset and split fro exmaple into following folder structure.
         └── labels
 ```
 
-### Run split scripts in /scripts
-The provided scripts generate files with definded splits
+### Datasplits provided for the resulting structure of the make.sh run
 
 ```
 ├── splits
@@ -71,62 +78,51 @@ val_split_0:
 
 Project Organization
 ------------
-
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
+    ├── environment-gpu.yaml <- install env. for GPU
+    ├── make.sh            <- download datasets
+    ├── pyproject.toml     <- commit settings
     ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
-    │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-    │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
     │
     ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
     │                         generated with `pip freeze > requirements.txt`
     │
     ├── setup.py           <- makes project pip installable (pip install -e .) so SSLightning4Med can be imported
+    ├── setup.cfg          <- commit setting
     ├── SSLightning4Med                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes SSLightning4Med a Python module
-    │   │
+    │       │   │
     │   ├── data           <- Scripts to download data and generate the split files
     │   │   ├── splits
     │   │   │       ├── [Dataset]
     │   │   │           ├── 1
     │   │   │               ├── split_0
     │   │   │                   └── split.yaml
-    │   │   └── make_dataset.py
+    │   │   └── dataset_scripts.py <- download and preprocess datasets
     │   │
     │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
+    │   │   └── dataset_statistics.py
     │   │
     │   ├── models         <- Scripts to train models and then use trained models to make
     │   │   │                 predictions
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
+    │   │   ├── base_module.py  <- base module the methods inherit 
+    │   │   ├── dataset.py      <- torch dataset
+    │   │   ├── data_module.py  <- torch data module
+    │   │   ├── data_module_St.py  <- torch data module for St++           
+    │   │   └── train_$module$.py <- the methods lightning train moduls  
+    │   ├── nets         <- the ANNs               
+    │   │   └──  $net$.py  <- U-Net, DeepLabV3+, etc.
+    │   ├── utils         <- Utility scripts
     │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
+    │   │   └── wandb_download_and_plot.py <- download results from wandb and plot them
+    │   ├── test.py   <- Scripts to test the trained models   
+    │   └── train.py  <- Scripts to train the models  
     │
     └── .pre-commit-config.yaml            <- pre commit file for a clean repository
 
 
 --------
 
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
-
 ## Augmentations => [Albumentations](https://albumentations.ai/)
 
 ## Acknowledgement
-Code is partly from [SSL4MIS](https://github.com/HiLab-git/SSL4MIS/) and  [ST++](https://github.com/LiheYoung/ST-PlusPlus).
+Code is partly from [ST++](https://github.com/LiheYoung/ST-PlusPlus), [CCT](https://github.com/yassouali/CCT), and [SSL4MIS](https://github.com/HiLab-git/SSL4MIS/).
 Thanks a lot for their great works!
