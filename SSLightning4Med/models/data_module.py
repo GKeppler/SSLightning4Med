@@ -199,7 +199,7 @@ class SemiDataModule(pl.LightningDataModule):
         return DataLoader(
             val_dataset,
             batch_size=1,
-            num_workers=self.num_workers,
+            num_workers=4,
             pin_memory=True,
         )
 
@@ -211,7 +211,7 @@ class SemiDataModule(pl.LightningDataModule):
         return DataLoader(
             test_dataset,
             batch_size=1,
-            num_workers=self.num_workers,
+            num_workers=4,
             pin_memory=True,
         )
 
@@ -226,7 +226,7 @@ class SemiDataModule(pl.LightningDataModule):
         return DataLoader(
             predict_dataset,
             batch_size=1,
-            num_workers=self.num_workers,
+            num_workers=4,
             pin_memory=True,
         )
 

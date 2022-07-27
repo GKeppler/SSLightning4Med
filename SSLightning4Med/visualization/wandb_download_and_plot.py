@@ -55,6 +55,7 @@ filters = {
             {"display_name": "peach-rain-2447"},  # CCT zebra 1/8 3
             {"display_name": "deep-glade-2449"},  # CCT zebra 1/30 0
             {"display_name": "treasured-fire-2439"},  # multi fixmatch,
+            # {"display_name": ""},  # multi CCT 1/30 2,
         ]
     },
     "test all": {
@@ -164,7 +165,7 @@ print("Amount of experiments AFTER removing duplicates: ", len(all_df))
 # %%
 # dataset comparison
 prep_df = all_df
-metric_name = "Runtime in min"  # "mDSC"
+metric_name = "mDSC"  # "Runtime in min"  # "mDSC"
 metric = metric_dict[metric_name]
 check_df = pd.DataFrame()
 dsc_df = pd.DataFrame()
@@ -437,7 +438,7 @@ xs = np.linspace(0.03334, 1, 1000)
 plt.plot(xs, f(xs), "b", lw=3)
 plt.plot(x, y, "ro", ms=5)
 # color the integral belwo the blue curve with light orange
-
+xs = np.linspace(0.03334, 1 / 4, 1000)
 plt.fill_between(xs, f(xs), 0.0, color="orange", alpha=0.2)
 # Gamma as greek symbol in x lable
 plt.xlabel(r"Splitratio $\Gamma$")
@@ -462,7 +463,7 @@ complex_df = complex_df.append(
 complex_df = complex_df.append(pd.Series([1, 1, 1, 0, 1], index=complex_df.columns, name="Q_complex"))
 
 weights_df = pd.DataFrame(
-    [[2.00, 0.00, 0.00, 0.00], [2.00, 0.00, 0.00, 1.00], [2.00, 1.00, 1.00, 0.00], [2.00, 1.00, 1.00, 1.00]],
+    [[1.00, 0.00, 0.00, 0.00], [0.9, 0.0, 0.00, 0.1], [0.8, 0.1, 0.1, 0.00], [0.7, 0.1, 0.1, 0.1]],
     index=["dev + resourcee", "no dev time, but resources", "no resources but dev time", "no resource+ no dev time"],
 )
 
@@ -476,7 +477,7 @@ for i, row in weights_df.iterrows():
     # pd.Series(zw,name=i, index=complex_df.columns)
     df_tot = df_tot.append(pd.Series(zw, name=i, index=complex_df.columns))
 # dmin-max normaliaztion of all row
-df_tot = df_tot.astype(float).apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=1).round(2)
+# df_tot = df_tot.astype(float).apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=1).round(2)
 latex = df_tot.to_latex(bold_rows=True)
 print(make_highest_row_el_fat(latex))
 #%%
