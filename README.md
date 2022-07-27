@@ -25,9 +25,9 @@ run
 ```
 make.sh
 ```
-to download ad preprocess the datasets
+to download and preprocess the datasets
 
-### or:
+### or
 
 [Ultrasound detection of breast nodules](https://scholar.cu.edu.eg/?q=afahmy/pages/dataset) | [SIIM 2017 ISIC Melanoma Segmentation](https://challenge.isic-archive.com/data/) | [SIIM-ACR Pneumothorax Segmentation](https://www.kaggle.com/c/siim-acr-pneumothorax-segmentation) etc.
 
@@ -74,7 +74,16 @@ val_split_0:
   - train/images/example_image6.png train/labels/example_mask6.png
 ```
 
-
+## train
+example
+```
+SSLightning4Med/train.py --dataset=melanoma --epochs=200 --loss=Dice --method=CCT --net=Unet --shuffle=0 --split=1_8 --use-wandb=True --wandb-project=SSLightning4Med
+```
+## test
+example
+```
+SSLightning4Med/test.py --dataset=melanoma --method=CCT --net=Unet --shuffle=0 --split=1_8 --use-wandb=True --wandb-project=SSLightning4Med
+```
 
 Project Organization
 ------------
