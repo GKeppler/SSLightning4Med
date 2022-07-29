@@ -9,6 +9,11 @@ from SSLightning4Med.utils.utils import consistency_weight
 
 
 class FixmatchModule(BaseModule):
+    """Pl Fixmatch training module. The trainng pileline is included.
+    Args:
+        BaseModule (pl.LightningModule): The base module.
+    """
+
     def __init__(self, args: Any) -> None:
         super(FixmatchModule, self).__init__(args)
         self.args = args

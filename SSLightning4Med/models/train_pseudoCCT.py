@@ -12,6 +12,11 @@ from SSLightning4Med.utils.utils import consistency_weight, wandb_image_mask
 
 
 class pseudoCCTModule(BaseModule):
+    """Pl PseudoCCT training module. The trainng pileline is included.
+    Args:
+        BaseModule (pl.LightningModule): The base module.
+    """
+
     def __init__(self, args: Any) -> None:
         super(pseudoCCTModule, self).__init__(args)
         self.args = args

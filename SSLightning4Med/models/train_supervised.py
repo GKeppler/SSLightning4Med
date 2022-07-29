@@ -6,6 +6,11 @@ from SSLightning4Med.models.base_module import BaseModule
 
 
 class SupervisedModule(BaseModule):
+    """Pl supervised training module. The trainng pileline is included.
+    Args:
+        BaseModule (pl.LightningModule): The base module.
+    """
+
     def __init__(self, args: Any) -> None:
         super(SupervisedModule, self).__init__(args)
         self.args = args

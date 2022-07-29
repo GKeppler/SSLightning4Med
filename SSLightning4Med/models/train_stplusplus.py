@@ -15,6 +15,11 @@ from SSLightning4Med.utils.utils import get_color_map
 
 
 class STPlusPlusModule(BaseModule):
+    """Pl STPlusPlus training module. The trainng pileline is included.
+    Args:
+        BaseModule (pl.LightningModule): The base module.
+    """
+
     def __init__(self, args: Any) -> None:
         super(STPlusPlusModule, self).__init__(args)
         self.checkpoints: List[torch.nn.Module] = []

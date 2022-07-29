@@ -1,9 +1,8 @@
 """
-This script downlaods metrics from Wandb, plots them, produces a latex table and saves results in a CSV
+This script downlaods metrics from Wandb, plots them and produces latex tables
 """
 #%%
 import os
-from typing import Dict
 
 import matplotlib
 import matplotlib.patches as mpatches
@@ -55,14 +54,7 @@ filters = {
             {"display_name": "peach-rain-2447"},  # CCT zebra 1/8 3
             {"display_name": "deep-glade-2449"},  # CCT zebra 1/30 0
             {"display_name": "treasured-fire-2439"},  # multi fixmatch,
-            # {"display_name": ""},  # multi CCT 1/30 2,
-        ]
-    },
-    "test all": {
-        "$or": [
-            {"sweep": "xqffwt68"},  # test all
-            {"sweep": "t7yc3a60"},  # Supervised all correct St++ weak augmentations
-            {"sweep": "v24zcssb"},  # hippocampus, mean,st++,fixmatch
+            {"sweep": "yuyisibf"},  # St++CCT all 0/1
         ]
     },
 }
@@ -90,7 +82,6 @@ summary_df = pd.DataFrame.from_records(summary_list)
 config_df = pd.DataFrame.from_records(config_list)
 name_df = pd.DataFrame({"name": name_list})
 all_df = pd.concat([name_df, config_df, summary_df], axis=1)
-print("Amount of experiments BEFORE preprocessing: ", len(all_df))
 # preprocessing
 all_df["split"] = all_df["split"].apply(lambda x: x.replace("_", "/"))
 
@@ -99,9 +90,7 @@ if len(all_df["dataset"].unique()) > 1:
     print("more that on dataset in the metrics: ", all_df["dataset"].unique())
 
 # drop rows with na in column "test mDICE"
-
 all_df = all_df.dropna(subset=["test medpy_dc"])
-print("Amount of experiments AFTER preprocessing: ", len(all_df))
 metric_dict = {
     "mDSC": "test medpy_dc",
     "mIoU": "test medpy_jc",
@@ -124,9 +113,18 @@ method_dict = {
     "St++": "ST++",
     "FixMatch": "FixMatch",
     "MeanTeacher": "MeanTeacher",
+    "St++CCT": "ST++CCT",
 }
-colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r"}
+colors = {"Supervised": "k", "St++": "b", "MeanTeacher": "g", "FixMatch": "y", "CCT": "r", "St++CCT": "c"}
 markers = {"1": "o", "1/4": "s", "1/8": "^", "1/30": "v"}
+dataset_markers = {
+    "ISIC Melanoma 2017": "o",
+    "Breast Ultrasound": "s",
+    "Pneumothorax": "^",
+    "Hippocampus": "v",
+    "HeartSeg": "D",
+    "Synapse multi-organ": "*",
+}
 latex = ""
 
 
@@ -157,27 +155,9 @@ def make_highest_row_el_fat(latex):
 
 
 #%%
-
-
-# goal is original image, original mask, and masks from methods. 2 per dataset
-
-# get dataframe of all_Df wher shuffle is 0
-all_df_shuffle_0 = all_df[all_df["shuffle"] == 0]
-# remove entries with split=1 from dataframe
-all_df_shuffle_0 = all_df_shuffle_0[all_df_shuffle_0["split"] != "1"]
-# iterate over all_df_shuffle_0 and download the examples
-runs = api.runs(f"gkeppler/{project_name}", filters=filters[name])
-for run in runs:
-    if run.name in all_df_shuffle_0["name"].values:
-        for file in run.files():
-            print(file.name)
-            file.download(replace=True, root="wandb_images")
-    break
-#%%
 # drop duplicates
 df = all_df.copy()
 all_df = all_df.loc[all_df[["split", "dataset", "method", "shuffle"]].drop_duplicates(inplace=False).index, :]
-print("Amount of experiments AFTER removing duplicates: ", len(all_df))
 
 # %%
 # dataset comparison
@@ -244,8 +224,7 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
     ax.title.set_text(dataset_dict[dataset_name])
     # disable axis legend
     ax.get_legend().remove()
-    # plt.legend()
-    # legend without overlap to axes
+# legend without overlap to axes
 plt.legend(loc="upper left", bbox_to_anchor=(1, 2.5), ncol=1, title="Methods")
 
 if not os.path.exists("figures"):
@@ -266,7 +245,6 @@ dsc_df.reset_index(inplace=True)
 dsc_df.set_index(["Dataset", "Split"], inplace=True)
 dsc_df.drop("level_1", axis=1, inplace=True)
 # to latex
-# make_highest_row_el_fat(dsc_df.to_latex(bold_rows=True))
 print(dsc_df.to_latex(bold_rows=True))
 
 # %%
@@ -351,16 +329,7 @@ for dataset_name, prep_df in all_df.groupby("dataset"):
             comb_df["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
         )
         comb_df = comb_df.sort_values("split_value")
-        # print(dataset_name, method, comb_df)
         x, y = comb_df["split_value"].values, comb_df["test medpy_dcmean"].values
-        # make spline derivative ~0.0 at end of x
-        # x = np.append(x, 1.1)
-        # y = np.append(y, y[-1])
-        # spl = UnivariateSpline(x, y, k=3)
-        # plt.plot(x, y, "ro", ms=5)
-        # xs = np.linspace(0.03334, 1, 1000)
-        # plt.plot(xs, spl(xs), "b", lw=3)
-        # print("The qubic Integral is: ", spl.integral(0.0333, 1) / comb_df["test medpy_dcmean"].iloc[-1])
         # # linear interpolation
         try:
             f = interp1d(x, y)
@@ -386,16 +355,6 @@ fig, ax = plt.subplots(figsize=(10, 5))
 ax.set_xlabel("Q Segmentation Quality")
 ax.set_ylabel("Q Time")
 ax.set_title("Runtime vs. DSC")
-# iter row in dataframe
-dataset_markers = {
-    "ISIC Melanoma 2017": "o",
-    "Breast Ultrasound": "s",
-    "Pneumothorax": "^",
-    "Hippocampus": "v",
-    "HeartSeg": "D",
-    "Synapse multi-organ": "*",
-}
-method_colors = {}
 # use dict inverse
 method_dict_inv = {v: k for k, v in method_dict.items()}
 
@@ -451,8 +410,6 @@ print(spl2.integral(0.0333, 1) / 0.96669)
 # add markers to x-axis for each split
 for i, xi in enumerate(x):
     plt.plot([xi, xi], [0, y[i]], "k--")
-    # add label to x-axis
-    # plt.text(xi, -0.04, comb_df["split"].iloc[i], ha="center", va="bottom")
 xs = np.linspace(0.0333, 1, 1000)
 plt.plot(xs, spl2(xs), "g", lw=3)
 f = interp1d(x, y)
@@ -496,7 +453,6 @@ for i, row in weights_df.iterrows():
     zw = []
     for lis in p:
         zw.append(sum(lis))
-    # pd.Series(zw,name=i, index=complex_df.columns)
     df_tot = df_tot.append(pd.Series(zw, name=i, index=complex_df.columns))
 # dmin-max normaliaztion of all row
 df_tot = df_tot.astype(float).apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=1).round(2)
@@ -510,141 +466,3 @@ p = complex_df.transpose().astype(float).corr(method="pearson", min_periods=1)
 p = p.applymap(lambda x: f"{x:.2f}")
 # latex
 print(p.to_latex(bold_rows=True))
-# %%
-# NOT USED
-# NOT USED
-# NOT USED
-# show metrics for method
-# for a given methods this will calculate the mean and std of the metrics
-
-# specify column names for metrics that are plotted later
-# ONLY WHEN A SUPERVISED ONLY TEST RUN WAS PERFORMED IS multiple_tests = True
-multiple_tests = False
-if multiple_tests:
-    # get history for first iteration of test sample
-    runs = api.runs(f"gkeppler/{project_name}")
-    metrics = ["test mIOU", "test mDICE", "test overall_acc"]
-    list_metrics = []
-    for i, run in enumerate(runs):
-        for j, row in run.history(keys=metrics).iterrows():
-            # get only first elements of history -> supervised metric
-            row.name = i
-            list_metrics.append(row)
-            break
-
-    # combine with additional metrics
-    sup_df = pd.DataFrame(list_metrics).add_suffix(" sup")
-    sup_df.head()
-    all_df = pd.concat([all_df, sup_df], axis=1)
-
-    columns = [
-        "split",
-        "test overall_acc",
-        "test overall_acc sup",
-        "test mIOU",
-        "test mIOU sup",
-        "test mDICE",
-        "test mDICE sup",
-    ]
-else:
-    columns = [
-        "split",
-        "test overall_acc",
-        "test mIOU",
-        "test mDICE",
-    ]
-
-metrics_df = all_df[columns].groupby("split").agg([np.mean, np.std, np.count_nonzero])
-metrics_df = metrics_df.reindex(["1", "1/4", "1/8", "1/30"])
-metrics_df.head()
-# drop Na
-metrics_df.dropna(axis=0, how="all", inplace=True)
-metrics_df.head()
-# columns are nested with mean, std in second row -> unzip and get list
-columns_table = list(set([el[0] for el in metrics_df.columns.tolist()]))
-# generate table
-
-
-# function to generate text from merics to use in latex table
-def make_text(s: Dict) -> str:
-    mean = s["mean"]
-    std = s["std"]
-    return f"{mean*100:.2f}({std*100:.2f})"
-
-
-# generate latex tables
-text_df = pd.DataFrame()
-for col in columns_table:
-    text_df[col] = metrics_df[col].apply(make_text, axis=1)
-print(text_df.transpose().to_latex())
-#%%
-# plot figures
-matplotlib.rcParams["mathtext.fontset"] = "stix"
-matplotlib.rcParams["font.family"] = "STIXGeneral"
-
-fig, ax = plt.subplots()
-for col in columns_table:
-    metrics_df[col].reset_index().plot("split", "mean", yerr="std", label=col[5:], ax=ax)
-plt.savefig(f"{project_name}_metrics.pdf", transparent=False, bbox_inches="tight")
-#%%
-# methods comparison
-prep_df = all_df
-# ['brats':fehler, 'hippocampus':"1" unter "1/4", 'multiorgan':"super low",
-#  'pneumothorax': low,'breastCancer': low,'zebrafish':"low", 'melanoma': ]
-prep_df = prep_df[prep_df["dataset"] == "melanoma"]
-for metric_name in metric_dict.keys():
-    metric = metric_dict[metric_name]
-    columns = [
-        "split",
-        "method",
-        metric,
-    ]
-    method_df = prep_df[columns].groupby(["method", "split"]).agg([np.mean, np.std, np.count_nonzero])
-    method_df.dropna(axis=0, how="all", inplace=True)
-    columns_table = list(set([el[0] for el in method_df.columns.tolist()]))
-    method_df.head()
-
-    # draw figure
-    fig, ax = plt.subplots()
-
-    for label, group in method_df.reset_index().groupby("method"):
-        # add a stepped horizontal lien to the plot
-        if label == "Supervised":
-            # get value of metric where split is 1
-            value = group.loc[group["split"] == "1", metric]["mean"].values[0]
-            print(value)
-            # drop this row from the dataframe "group"
-            group = group.drop(group[group["split"] == "1"].index)
-            ax.axhline(y=value, color="k", linestyle="--", label="Full Supervised")
-
-        # add label to legend
-
-        group.columns = ["".join(col) for col in group.columns]
-        # replace Na with 0
-        group[metric + "std"].replace(np.NaN, 0, inplace=True)
-        group["order"] = group["split"].str.split("/").apply(lambda x: float(x[0]) / float(x[1]) if len(x) > 1 else 1)
-        print(group.head())
-        group.sort_values(by="order").plot("split", metric + "mean", yerr=metric + "std", label=label, ax=ax)
-    ax.set_xlabel("Split")
-    ax.set_ylabel(metric_name)
-    plt.legend()
-    if not os.path.exists("figures"):
-        os.makedirs("figures")
-    dataset = prep_df["dataset"].iloc[0]
-    plt.savefig(
-        f"figures/{project_name}_{name}_{dataset}_{metric}_methods.pdf", transparent=False, bbox_inches="tight"
-    )
-#%%
-# get earlier values:
-# the first entry in "test medpy_dc" is the test value computed with the checkpoint from the last epoch
-metrics = ["test medpy_dc"]
-list_metrics = []
-for i, run in enumerate(runs):
-    for j, row in run.history(keys=metrics).iterrows():
-        # get only first elements of history -> supervised metric
-        row.name = i
-        list_metrics.append(row)
-        break
-late_epoch_df = pd.DataFrame(list_metrics).add_suffix(" lastepoch")
-# merge with all_df
-all_df = pd.concat([all_df, late_epoch_df], axis=1)

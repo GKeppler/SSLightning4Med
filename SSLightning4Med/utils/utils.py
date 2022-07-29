@@ -15,6 +15,8 @@ EPS = 1e-10
 
 
 class meanIOU:
+    """a class for computing mean IoU"""
+
     def __init__(self, num_classes: int) -> None:
         self.num_classes = num_classes
         self.hist = np.zeros((num_classes, num_classes))
@@ -37,6 +39,8 @@ class meanIOU:
 
 
 class mulitmetrics:
+    """a class for computing several metrics including mIoU, mDSC, mHD95, mASD."""
+
     # from https://github.com/kevinzakka/pytorch-goodies/blob/c039691f349be9f21527bb38b907a940bfc5e8f3/metrics.py
     def __init__(self, num_classes: int) -> None:
         self.num_classes = num_classes
@@ -128,6 +132,14 @@ class getOneHot:
 
 
 def tensorboard_image_grid(pred: Tensor, color_map: ndarray) -> None:
+    """Writes a grid of images to tensorboard.
+
+    Args:
+        pred (Tensor): The prediction tensor.
+        color_map (ndarray): The color map to use.
+
+    Returns: image_grid (Tensor): The image grid.
+    """
     # log pred mask
     pred = pred.squeeze(1).numpy().astype(np.uint8)
     pred = np.array(color_map)[pred]
@@ -137,6 +149,17 @@ def tensorboard_image_grid(pred: Tensor, color_map: ndarray) -> None:
 
 
 def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21, caption: str = None) -> None:
+    """Writes images, masks, and predictions to wandb.
+
+    Args:
+        img (Tensor): The image tensor.
+        mask (Tensor): The mask tensor.
+        pred (Tensor): The prediction tensor.
+        nclass (int, optional): Amount of classes. Defaults to 21.
+        caption (str, optional): Caption for wandb. Defaults to None.
+
+    Returns: wandb.Image
+    """
     class_labeles = dict((el, "something") for el in list(range(nclass)))
     class_labeles.update({0: "nothing"})
     return wandb.Image(
@@ -154,14 +177,14 @@ def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21, 
                 ),
                 "class_labels": class_labeles,
             },
-            # "ground_truth": {
-            #     "mask_data": cv2.resize(
-            #         np.squeeze(mask.cpu().numpy(), axis=0),
-            #         dsize=(100, 100),
-            #         interpolation=cv2.INTER_NEAREST,
-            #     ),
-            #     "class_labels": class_labeles,
-            # },
+            "ground_truth": {
+                "mask_data": cv2.resize(
+                    np.squeeze(mask.cpu().numpy(), axis=0),
+                    dsize=(100, 100),
+                    interpolation=cv2.INTER_NEAREST,
+                ),
+                "class_labels": class_labeles,
+            },
         },
         caption=caption,
     )
@@ -169,8 +192,12 @@ def wandb_image_mask(img: Tensor, mask: Tensor, pred: Tensor, nclass: int = 21, 
 
 # From CCT paper
 class consistency_weight(object):
-    """
-    ramp_types = ['sigmoid_rampup', 'linear_rampup', 'cosine_rampup', 'log_rampup', 'exp_rampup']
+    """Returns a consistency weight for the consistency loss.
+
+    Args:
+    ramp_types: ['sigmoid_rampup', 'linear_rampup', 'cosine_rampup', 'log_rampup', 'exp_rampup']
+    final_w: Final weight for the consistency loss.
+    rampup_ends: The end of the rampup in epochs.
     """
 
     def __init__(self, final_w, rampup_ends=7, ramp_type="exp_rampup"):
@@ -184,6 +211,13 @@ class consistency_weight(object):
 
 
 def get_color_map(dataset):
+    """Returns a color map for the given dataset.
+
+    Args:
+        dataset: The dataset to use.
+
+    Returns: color_map (ndarray): The color map.
+    """
     return {
         "melanoma": [
             [0, 0, 0],

@@ -189,13 +189,11 @@ def get_trainer(args):
         wandb.config.update(args)
 
     # define Trainer
-    dev_run = False  # not working when predicting with best_model checkpoint
     callbacks = [checkpoint_callback, checkpoint_callback2, lr_monitor]
     if args.early_stopping:
         callbacks.append(early_stopping)
     trainer = pl.Trainer.from_argparse_args(
         args,
-        fast_dev_run=dev_run,
         max_epochs=args.epochs,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=callbacks,
@@ -245,6 +243,7 @@ def get_datamodule(args):
 
 
 if __name__ == "__main__":
+    """The main traing script calling all implemented methods."""
     args = base_parse_args(BaseModule)
     seed_everything(123, workers=True)
     # define Module based on methods
