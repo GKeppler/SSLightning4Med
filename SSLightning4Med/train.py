@@ -11,9 +11,6 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 import wandb
 from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-from SSLightning4Med.models.data_module_st import SemiDataModuleST
-
-# from SSLightning4Med.models.train_bolt import BoltModule
 from SSLightning4Med.models.train_CCT import CCTModule
 from SSLightning4Med.models.train_fixmatch import FixmatchModule
 from SSLightning4Med.models.train_mean_teacher import MeanTeacherModule
@@ -74,28 +71,6 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     args = parser.parse_args()
     if args.method is None:
         raise ValueError("no methodname in model_specific_args specified    .")
-    if args.data_root is None:
-        if args.lsdf:
-            args.data_root = {
-                "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/melanoma256",
-                "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/breastCancer256",
-                "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/pneumothorax",
-                "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/multiorgan256",
-                "brats": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/brats",
-                "hippocampus": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/hippocampus32",
-                "zebrafish": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/zebrafish256",
-            }[args.dataset]
-        else:
-            args.data_root = {
-                "melanoma": "/home/kit/stud/uwdus/Masterthesis/data/melanoma256",
-                "breastCancer": "/home/kit/stud/uwdus/Masterthesis/data/breastCancer256",
-                "pneumothorax": "/home/kit/stud/uwdus/Masterthesis/data/pneumothorax",
-                "multiorgan": "/home/kit/stud/uwdus/Masterthesis/data/multiorgan",
-                "brats": "/home/kit/stud/uwdus/Masterthesis/data/brats",
-                "hippocampus": "/home/kit/stud/uwdus/Masterthesis/data/hippocampus",
-                "zebrafish": "/home/kit/stud/uwdus/Masterthesis/data/zebrafish256",
-            }[args.dataset]
-
     if args.epochs is None:
         args.epochs = 100
     if args.crop_size is None:
@@ -200,12 +175,6 @@ def get_trainer(args):
         gpus=[0],
         precision=16,
         log_every_n_steps=2,
-        # accelerator="cpu",
-        # profiler="simple",
-        # auto_lr_find=True,
-        # track_grad_norm=True,
-        # detect_anomaly=True,
-        # overfit_batches=1,
     )
     return trainer, checkpoint_callback
 
@@ -214,10 +183,7 @@ def get_datamodule(args):
     # Define DataModule with Augmentations
     augs = Augmentations(args)
     color_map = get_color_map(args.dataset)
-    if args.method == "St++":
-        dataModule = SemiDataModuleST
-    else:
-        dataModule = SemiDataModule
+    dataModule = SemiDataModule
     dataModule = dataModule(
         root_dir=args.data_root,
         batch_size=args.batch_size,
@@ -255,6 +221,5 @@ if __name__ == "__main__":
         "FixMatch": FixmatchModule,
         "PseudoCCT": pseudoCCTModule,
         "St++CCT": STPlusPlusCCTModule,
-        # "Bolt": BoltModule,
     }[args.method]
     module.pipeline(get_datamodule, get_trainer, args)
