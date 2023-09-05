@@ -19,12 +19,12 @@ from SSLightning4Med.utils.utils import get_color_map
 transform = A.Compose([A.SmallestMaxSize(200), A.CenterCrop(200, 200)])
 
 dataset_dict = {
+    "multiorgan": "Synapse multi-organ",
     "melanoma": "ISIC Melanoma 2017",
     "breastCancer": "Breast Ultrasound",
     "pneumothorax": "Pneumothorax",
     "hippocampus": "Hippocampus",
     "zebrafish": "HeartSeg",
-    "multiorgan": "Synapse multi-organ",
 }
 method_dict = {
     "St++": "ST++",
@@ -137,6 +137,7 @@ fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
 
 for dataset_name in dataset_dict.keys():
+    print(dataset_name)
     colormap_dict = {
         "melanoma": pascal_color_map_bw(),
         "breastCancer": pascal_color_map_bw(),
@@ -147,7 +148,7 @@ for dataset_name in dataset_dict.keys():
     }
     color_map2 = colormap_dict[dataset_name]
     data_root = {
-        "melanoma": "/home/gustav/datasets/melanoma256",  # /lsdf/kit/iai/projects/iai-aida/Daten_Keppler/melanoma256",
+        "melanoma": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/melanoma256",
         "breastCancer": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/breastCancer256",
         "pneumothorax": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/pneumothorax",
         "multiorgan": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/multiorgan256",
@@ -156,10 +157,11 @@ for dataset_name in dataset_dict.keys():
         "zebrafish": "/lsdf/kit/iai/projects/iai-aida/Daten_Keppler/zebrafish256",
     }[dataset_name]
     i = 0
+    dirname = os.path.dirname(os.path.realpath(__file__))
     for split in split_dict.keys():
         # get image, mask
         color_map = get_color_map(dataset_name)
-        with open(f"../data/splits/{dataset_name}/test.yaml") as file:
+        with open(os.path.join(dirname, f"../data/splits/{dataset_name}/test.yaml")) as file:
             test_list = yaml.load(file, Loader=yaml.FullLoader)
         dataset = BaseDataset(
             root_dir=data_root,
@@ -169,6 +171,8 @@ for dataset_name in dataset_dict.keys():
         )
         # get first image
         image, org_mask, id = dataset[0]
+        if len(image.shape) == 2:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         org_mask = np.array(color_map2)[org_mask]
         image = image.copy()
         # save image, mask, id in pandas series object
@@ -186,7 +190,8 @@ for dataset_name in dataset_dict.keys():
             test_mask = cv2.imread(
                 os.path.join(f"{data_root}/test_masks/{method}/{split}/split_0", fname), cv2.IMREAD_UNCHANGED
             )
-            mask = preprocess_mask(test_mask, color_map)
+            print(np.unique(test_mask))
+            test_mask = preprocess_mask(test_mask, color_map)
             test_mask = transform(image=image, mask=test_mask)["mask"]
             test_mask = np.argmax(test_mask, axis=2)
             test_mask = np.array(color_map2)[test_mask]
@@ -195,18 +200,13 @@ for dataset_name in dataset_dict.keys():
         ax[i, 0].imshow(df_row["image"])
         ax[i, 1].imshow(df_row["mask"])
         ax[i, 2].imshow(df_row["Supervised_mask"])
+        print(np.unique(df_row["Supervised_mask"]))
         ax[i, 3].imshow(df_row["St++_mask"])
         ax[i, 4].imshow(df_row["CCT_mask"])
-        ax[i, 5].imshow(df_row["MeanTeacher"])
+        ax[i, 5].imshow(df_row["MeanTeacher_mask"])
         ax[i, 6].imshow(df_row["FixMatch_mask"])
-        # add titels to each row of the figure
-        ax[i, 0].set_title("Image", fontsize=12)
-        ax[i, 1].set_title("Original mask", fontsize=12)
-        ax[i, 3].set_title("ST++", fontsize=12)
-        ax[i, 4].set_title("CCT", fontsize=12)
-        ax[i, 5].set_title("MeanTeacher", fontsize=12)
-        ax[i, 6].set_title("FixMatch", fontsize=12)
-        ax[i, 0].set_ylabel(split_dict[split], fontsize=12)
+
+        ax[i, 0].set_ylabel(split_dict[split], fontsize=16)
 
         for j in range(7):
             ax[i, j].set_xticks([])
@@ -228,10 +228,23 @@ for dataset_name in dataset_dict.keys():
         legend_elements.append(
             mpatches.Patch(facecolor=tuple(np.array(color_map2)[i] / 255.0), label=legend_dict[i], edgecolor="black")
         )
-
+    # add titels to each row of the figure
+    ax[0, 0].set_title("Image", fontsize=16)
+    ax[0, 1].set_title("Original mask", fontsize=16)
+    ax[0, 2].set_title("Supervised mask", fontsize=16)
+    ax[0, 3].set_title("ST++", fontsize=16)
+    ax[0, 4].set_title("CCT", fontsize=16)
+    ax[0, 5].set_title("MeanTeacher", fontsize=16)
+    ax[0, 6].set_title("FixMatch", fontsize=16)
     # legend without overlap to axes
     plt.legend(handles=legend_elements, loc="upper left", bbox_to_anchor=(1, 2), ncol=1, title="Classes")
 
-    plt.savefig(f"{dataset_name}_comparison.png", pad_inches=0, bbox_inches="tight", transparent=True, dpi=300)
-
-    # %%
+    plt.savefig(
+        os.path.join(dirname, "methodcomparison_splitwise", f"{dataset_name}_comparison_splitwise.pdf"),
+        pad_inches=0,
+        bbox_inches="tight",
+        transparent=True,
+        dpi=300,
+    )
+#
+# %%

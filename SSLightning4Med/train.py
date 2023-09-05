@@ -65,7 +65,7 @@ def base_parse_args(LightningModule) -> Any:  # type: ignore
     )
     parser.add_argument("--use-wandb", default=False, help="whether to use WandB for logging")
     parser.add_argument("--wandb-project", type=str, default="SSLightning4Med")
-    parser.add_argument("--lsdf", default=True, help="whether to use the LSDF storage")
+    parser.add_argument("--lsdf", default=False, help="whether to use the LSDF storage")
     # add model specific args
     parser = LightningModule.add_model_specific_args(parser)
     # add all the availabele trainer options to argparse

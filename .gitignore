@@ -98,3 +98,4 @@ monkeytype.sqlite3
 *.ckpt
 SSLightning4Med/visualization/figures/*
 SSLightning4Med/data/splits/melanoma/split_small.yaml
+SSLightning4Med/visualization/methodcomparison_splitwise/*
