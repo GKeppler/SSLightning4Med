@@ -15,6 +15,20 @@ from SSLightning4Med.models.dataset import BaseDataset
 
 
 class SemiDataModule(pl.LightningDataModule):
+    """The PL data module for semi-supervised training.
+    Args:
+        root_dir (str): The root directory of the dataset.
+        batch_size (int): The batch size.
+        split_yaml_path (str): The path to the split yaml file.
+        test_yaml_path (str): The path to the test yaml file.
+        pseudo_mask_path (str): The path to the pseudo mask.
+        batch_size_unlabeled (int): The batch size for the unlabeled data.
+        color_map (ndarray): The color map.
+        mode (str): The training mode.
+        num_workers (int): The number of workers.
+        oversample (bool): Whether to oversample the unlabeled data.
+    """
+
     def __init__(
         self,
         root_dir: str,

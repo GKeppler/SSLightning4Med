@@ -31,29 +31,7 @@ net_zoo = {
 
 
 class BaseModule(pl.LightningModule):
-    @staticmethod
-    def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
-        """
-        A rule of thumb here is to double the learning rate as you double the batch size.
-        """
-        parser.add_argument("--lr", type=float, default=0.001)
-        parser.add_argument("--optimizer", type=str, default="Adam", choices=["SGD", "AdamWOneCycle", "Adam"])
-        parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
-        parser.add_argument(
-            "--method",
-            default="Supervised",
-            choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher", "FixMatch", "PseudoCCT", "St++CCT"],
-        )
-
-        # For St++ Model
-        parser.add_argument(
-            "--plus",
-            dest="plus",
-            default=True,
-            help="whether to use ST++",
-        )
-        parser.add_argument("--use-tta", default=False, help="whether to use Test Time Augmentation")
-        return parser
+    """The base module is used to train the models."""
 
     def __init__(self, args) -> None:  # type: ignore
         super(BaseModule, self).__init__()
@@ -80,6 +58,30 @@ class BaseModule(pl.LightningModule):
         )
         self.color_map = get_color_map(args.dataset)
         self.set_metrics()
+
+    @staticmethod
+    def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
+        """
+        A rule of thumb here is to double the learning rate as you double the batch size.
+        """
+        parser.add_argument("--lr", type=float, default=0.001)
+        parser.add_argument("--optimizer", type=str, default="Adam", choices=["SGD", "AdamWOneCycle", "Adam"])
+        parser.add_argument("--net", type=str, choices=list(net_zoo.keys()), default="Unet")
+        parser.add_argument(
+            "--method",
+            default="Supervised",
+            choices=["CCT", "St++", "Bolt", "Supervised", "MeanTeacher", "FixMatch", "PseudoCCT", "St++CCT"],
+        )
+
+        # For St++ Model
+        parser.add_argument(
+            "--plus",
+            dest="plus",
+            default=True,
+            help="whether to use ST++",
+        )
+        parser.add_argument("--use-tta", default=False, help="whether to use Test Time Augmentation")
+        return parser
 
     def set_metrics(self):
         self.metric = meanIOU(num_classes=self.n_class)

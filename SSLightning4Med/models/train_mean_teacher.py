@@ -47,6 +47,11 @@ class Bn_Controller:
 
 
 class MeanTeacherModule(BaseModule):
+    """Pl MeanTeacher training module. The trainng pileline is included.
+    Args:
+        BaseModule (pl.LightningModule): The base module.
+    """
+
     def __init__(self, args: Any) -> None:
         super(MeanTeacherModule, self).__init__(args)
         self.bn_controller = Bn_Controller()

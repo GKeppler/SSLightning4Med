@@ -31,7 +31,7 @@ to download and preprocess the datasets
 
 [Ultrasound detection of breast nodules](https://scholar.cu.edu.eg/?q=afahmy/pages/dataset) | [SIIM 2017 ISIC Melanoma Segmentation](https://challenge.isic-archive.com/data/) | [SIIM-ACR Pneumothorax Segmentation](https://www.kaggle.com/c/siim-acr-pneumothorax-segmentation) etc.
 
-Download dataset and split from exmaple into following folder structure.
+Download dataset manually and split them into the folder
 ```
 ├── [Your Dataset Path]
     ├── train

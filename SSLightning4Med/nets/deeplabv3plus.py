@@ -1,3 +1,6 @@
+"""
+Segformer is borrowed from https://github.com/LiheYoung/ST-PlusPlus
+"""
 import torch
 import torch.nn.functional as F
 from torch import nn

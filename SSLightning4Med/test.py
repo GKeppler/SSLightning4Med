@@ -8,8 +8,6 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 import wandb
 from SSLightning4Med.models.base_module import BaseModule
 from SSLightning4Med.models.data_module import SemiDataModule
-
-# from SSLightning4Med.models.train_bolt import BoltModule
 from SSLightning4Med.models.train_CCT import CCTModule
 from SSLightning4Med.models.train_fixmatch import FixmatchModule
 from SSLightning4Med.models.train_mean_teacher import MeanTeacherModule
@@ -39,9 +37,6 @@ def main(args):
     )
 
     dataModule.val_transforms = augs.a_val_transforms()
-    # get filenames at dirpath os.path.join(f"{args.save_path}"),
-
-    # load checkpoint with highest val_mIoU
 
     if args.use_wandb:
         # https://pytorch-lightning.readthedocs.io/en/1.5.0/extensions/generated/pytorch_lightning.loggers.WandbLogger.html
@@ -62,13 +57,6 @@ def main(args):
             logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
             gpus=[0],
             precision=16,
-            log_every_n_steps=2,
-            # accelerator="cpu",
-            # profiler="simple",
-            # auto_lr_find=True,
-            # track_grad_norm=True,
-            # detect_anomaly=True,
-            # overfit_batches=1,
         )
         # define Module based on methods
         module = {
@@ -78,7 +66,6 @@ def main(args):
             "MeanTeacher": MeanTeacherModule,
             "FixMatch": FixmatchModule,
             "St++CCT": STPlusPlusCCTModule,
-            # "Bolt": BoltModule,
         }[args.method]
         model = module(args)
         # trainer.test(datamodule=dataModule, model=model, ckpt_path=os.path.join(f"{args.save_path}", max_epoch_file))
@@ -86,5 +73,6 @@ def main(args):
 
 
 if __name__ == "__main__":
+    """The test pipline to test the pretrained models."""
     args = base_parse_args(BaseModule)
     main(args)

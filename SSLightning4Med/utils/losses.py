@@ -4,6 +4,8 @@ from torch.nn import functional as F
 
 
 class CELoss(Module):
+    """A module to compute the cross entropy loss depending on the number of classes."""
+
     def __init__(self, n_class):
         super(CELoss, self).__init__()
         self.n_class = n_class
@@ -23,9 +25,13 @@ class CELoss(Module):
         return self.criterion(pred, mask)
 
 
-# https://stackoverflow.com/questions/63735255/how-do-i-compute-bootstrapped-cross-entropy-loss-in-pytorch
-# big increase for CCT
 class BootstrappedCE(Module):
+    """The boosted version of the cross entropy loss.
+     from https://stackoverflow.com/questions/63735255/how-do-i-compute-bootstrapped-cross-entropy-loss-in-pytorch
+    Args:
+        Module (_type_): _description_
+    """
+
     def __init__(self, start_warm=20000, end_warm=70000, top_p=0.15):
         super().__init__()
 
@@ -49,6 +55,8 @@ class BootstrappedCE(Module):
 
 
 class DiceLoss(Module):
+    """The dice loss for binary and multi-class segmentation."""
+
     def __init__(self, n_classes):
         super(DiceLoss, self).__init__()
         self.n_classes = n_classes

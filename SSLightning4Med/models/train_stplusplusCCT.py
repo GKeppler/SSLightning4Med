@@ -23,6 +23,11 @@ def consistency_loss(logits_w1, logits_w2):
 
 
 class STPlusPlusCCTModule(BaseModule):
+    """Pl STPlusPlusCCT training module. The trainng pileline is included.
+    Args:
+        BaseModule (pl.LightningModule): The base module.
+    """
+
     def __init__(self, args: Any) -> None:
         super(STPlusPlusCCTModule, self).__init__(args)
         self.checkpoints: List[torch.nn.Module] = []

@@ -20,9 +20,11 @@ def consistency_loss(logits_w1, logits_w2):
 
 
 class CCTModule(BaseModule):
-    """
-    this is the implementation of the CCT SSL approach
-    - custom unet with aux decoders 1-3
+    """Pl CCT training module. The trainng pileline is included.
+        This is the implementation of the CCT SSL approach
+    -   custom unet with aux decoders 1-3
+        Args:
+            BaseModule (pl.LightningModule): The base module.
     """
 
     def __init__(self, args: Any):
