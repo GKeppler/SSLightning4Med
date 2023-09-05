@@ -55,7 +55,8 @@ def main(args):
         trainer = pl.Trainer.from_argparse_args(
             args,
             logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
-            gpus=[0],
+            accelerator="gpu",
+            devices=[0],
             precision=16,
         )
         # define Module based on methods

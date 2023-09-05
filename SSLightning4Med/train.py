@@ -172,7 +172,8 @@ def get_trainer(args):
         max_epochs=args.epochs,
         logger=wandb_logger if args.use_wandb else TensorBoardLogger("./tb_logs"),
         callbacks=callbacks,
-        gpus=[0],
+        accelerator="gpu",
+        devices=[0],
         precision=16,
         log_every_n_steps=2,
     )
